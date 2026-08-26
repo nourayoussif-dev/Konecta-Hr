@@ -1,0 +1,2852 @@
+<!DOCTYPE html>
+<html><head><base target="_top"><style>
+:root{--navy:#2800C8;--lilac:#EEEDFE;--yellow:#FFE100;--ink:#1a1a2e;--muted:#6b6b80;--line:#e3e3ee;--bg:#fafaff;--danger:#c62828;--ok:#2e7d32}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:860px;margin:0 auto;padding:20px 16px 60px}
+header{background:var(--navy);color:#fff;padding:20px 16px}
+header .inner{max-width:860px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+header h1{font-size:19px}header p{font-size:12px;opacity:.85;margin-top:3px}
+.role{background:rgba(255,255,255,.15);padding:4px 12px;border-radius:14px;font-size:12px;font-weight:bold}
+.card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:20px;margin-bottom:16px}
+.card h2{font-size:15px;color:var(--navy);margin-bottom:4px}
+.card .sub{font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:640px){.grid{grid-template-columns:1fr}}
+.f{display:flex;flex-direction:column;gap:4px;margin-bottom:2px}
+.f label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.f{min-width:0}
+.f input,.f select{width:100%;max-width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:5px;font-size:14px;font-family:inherit;background:#fff}
+.f input:focus,.f select:focus{outline:2px solid var(--navy);border-color:var(--navy)}
+.ro{background:var(--lilac);border-radius:6px;padding:14px}
+.ro .row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #dcdbf5;font-size:13px}
+.ro .row:last-child{border:none}.ro .k{color:var(--muted)}.ro .v{font-weight:bold}
+button{background:var(--navy);color:#fff;border:0;padding:11px 20px;border-radius:5px;font-size:14px;font-weight:bold;cursor:pointer;font-family:inherit}
+button:hover{opacity:.92}button:disabled{opacity:.45;cursor:not-allowed}
+button.ghost{background:#fff;color:var(--navy);border:1px solid var(--navy)}
+button.ok{background:var(--ok)}
+.bar{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.msg{padding:12px 14px;border-radius:6px;font-size:13px;margin-bottom:14px;line-height:1.5;display:none}
+.msg.ok{background:#e8f5e9;color:var(--ok);border:1px solid #a5d6a7;display:block}
+.msg.err{background:#ffebee;color:var(--danger);border:1px solid #ef9a9a;display:block}
+.msg.warn{background:#fff8e1;color:#8d6e00;border:1px solid #ffe082;display:block}
+.prog{height:7px;background:var(--line);border-radius:4px;overflow:hidden;margin:8px 0}
+.prog i{display:block;height:100%;background:var(--navy)}
+.gaps{font-size:12px;color:var(--danger);line-height:1.6}.gaps.chase{color:#8d6e00}
+.pick{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
+@media(max-width:640px){.pick{grid-template-columns:1fr}}
+.pick button{padding:24px 16px;font-size:15px}
+.hide{display:none}.load{text-align:center;padding:50px;color:var(--muted)}
+.badge{display:inline-block;background:var(--yellow);color:#000;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold}
+.qitem{border:1px solid var(--line);border-radius:6px;padding:12px 14px;margin-bottom:10px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.qitem:hover{border-color:var(--navy);background:#f7f7ff}
+.qitem .nm{font-weight:bold}.qitem .meta{font-size:12px;color:var(--muted)}
+.pill{font-size:11px;padding:3px 9px;border-radius:10px;font-weight:bold}
+.pill.pending{background:#fff8e1;color:#8d6e00}.pill.verified{background:#e3f2fd;color:#1565c0}
+.pill.blocked{background:#ffebee;color:var(--danger)}
+.gate{display:flex;gap:8px;align-items:center;font-size:13px;margin:5px 0}
+.gate .dot{width:16px;height:16px;border-radius:50%;flex-shrink:0}
+.gate .dot.on{background:var(--ok)}.gate .dot.off{background:var(--line)}
+.back{color:var(--navy);cursor:pointer;font-size:13px;font-weight:bold;margin-bottom:12px;display:inline-block}
+.warnbox{background:#fff8e1;border:1px solid #ffe082;border-radius:6px;padding:12px;font-size:13px;color:#8d6e00;margin-bottom:14px}
+h3{font-size:13px;color:var(--navy);margin:16px 0 8px}
+</style></head>
+<body>
+<header><div class="inner">
+  <div><h1>Konecta Egypt</h1><p id="who">Loading…</p></div>
+  <div class="role hide" id="roleBadge"></div>
+</div></header>
+<div class="wrap">
+  <div id="loading" class="load">Loading…</div>
+
+  <!-- EMPLOYEE: not linked -->
+  <div id="choice" class="card hide">
+    <h2>Account not linked yet</h2>
+    <p class="sub">We could not find a record linked to <strong id="whoEmail"></strong>.<br><br>
+    If you are a new hire, your record is created by HR once your details are approved. You will receive an email the moment your account is ready to complete. If you believe this is an error, please contact HR.</p>
+  </div>
+
+  <!-- TAB BAR -->
+  <div id="tabBar" class="hide" style="max-width:860px;margin:0 auto;padding:16px 16px 0;display:flex;gap:8px;flex-wrap:wrap">
+    <button id="tabDetails" onclick="showTab('details')" style="border-radius:8px 8px 0 0">My Details</button>
+    <button id="tabTeam" class="ghost hide" onclick="showTab('team')" style="border-radius:8px 8px 0 0">My Team</button>
+    <button id="tabLeave" class="ghost" onclick="showTab('leave')" style="border-radius:8px 8px 0 0">Leave Request</button>
+    <button id="tabResign" class="ghost" onclick="showTab('resign')" style="border-radius:8px 8px 0 0">Resignation</button>
+    <button id="tabLetter" class="ghost" onclick="showTab('letter')" style="border-radius:8px 8px 0 0">HR Letter</button>
+    <button id="tabContract" class="ghost" onclick="showTab('contract')" style="border-radius:8px 8px 0 0">My Contract</button>
+    <button id="tabPayslip" class="ghost" onclick="showTab('payslip')" style="border-radius:8px 8px 0 0">My Payslip</button>
+    <button id="tabNoShow" class="ghost" onclick="showTab('noshow')" style="border-radius:8px 8px 0 0">Report a departure</button>
+  </div>
+
+  <!-- EMPLOYEE: self-service -->
+  <div id="main" class="hide"></div>
+
+  <!-- MANAGER: my team -->
+  <div id="teamView" class="hide"><div class="wrap" style="padding-top:0">
+    <div class="card">
+      <h2>Start a termination</h2>
+      <p class="sub">For someone on your team who is being dismissed, has failed probation, or whose contract is not being renewed. A dismissal for misconduct goes to HR with your evidence before anything happens.</p>
+      <div id="tmMsg" class="msg"></div>
+      <div class="grid">
+        <div class="f"><label>Employee ID</label><input id="tmId" placeholder="e.g. EG0123" onblur="lookupTerm()"></div>
+        <div class="f"><label>&nbsp;</label><div id="tmWho" class="sub" style="margin:0;line-height:1.4"></div></div>
+        <div class="f"><label>Reason</label><select id="tmReason" onchange="tmReasonChanged()"><option value=""></option></select></div>
+        <div class="f"><label>Last working day</label><input type="date" id="tmDate"></div>
+      </div>
+      <div id="tmExtra"></div>
+      <div class="f" style="margin-top:10px"><label>Details</label>
+        <input id="tmDetails" placeholder="What has led to this"></div>
+      <div class="bar"><button onclick="submitTerm()">Submit</button></div>
+    </div>
+    <div class="card">
+      <h2>Clearance — waiting on you</h2>
+      <p class="sub">Departures needing your action. Clearance starts with handover: IT and Facilities cannot collect equipment until both managers confirm.</p>
+      <div id="clMsg" class="msg"></div>
+      <div id="clList"><p class="sub">Loading…</p></div>
+    </div>
+    <div class="card">
+      <h2>Resignations awaiting your agreement</h2>
+      <p class="sub">You and the other manager must agree ONE last working day. Neither of you can override the other. If no date is agreed within 10 days of the resignation, the date the employee proposed will stand automatically.</p>
+      <div id="rsMsg" class="msg"></div>
+      <div id="rsList"><p class="sub">Loading…</p></div>
+    </div>
+    <div class="card">
+      <h2>Leave awaiting your approval</h2>
+      <p class="sub">You can approve all the days requested, or fewer. Days you do not approve stay available to the employee.</p>
+      <div id="apprMsg" class="msg"></div>
+      <div id="apprList"><p class="sub">Loading…</p></div>
+    </div>
+    <div class="card">
+      <h2>My team</h2>
+      <p class="sub">People who report to you. View only.</p>
+      <div id="teamList"></div>
+    </div>
+    <div class="card">
+      <h2>File leave for someone in my team</h2>
+      <p class="sub">For when they cannot file it themselves — usually sickness. They are emailed
+      straight away, so nothing is recorded in their name without their knowledge.
+      Sick and other entitled leave goes to HR for the document. For annual or unpaid,
+      filing it counts as your approval and is recorded in your name.</p>
+      <div id="obMsg" class="msg"></div>
+      <div class="grid">
+        <div class="f"><label>Employee ID</label><input id="obId" placeholder="e.g. EG0123" onblur="obLookup()"></div>
+        <div class="f"><label>&nbsp;</label><div id="obWho" class="sub" style="margin:0;line-height:1.4"></div></div>
+        <div class="f"><label>Leave type</label><select id="obType" onchange="obTypeChanged()"><option value=""></option></select></div>
+        <div class="f"><label>&nbsp;</label><div id="obTypeNote" class="sub" style="margin:0;line-height:1.4"></div></div>
+        <div class="f"><label>First day</label><input type="date" id="obStart" onchange="obDatesChanged()"></div>
+        <div class="f"><label>Last day</label><input type="date" id="obEnd" onchange="obDatesChanged()"></div>
+      </div>
+      <div id="obPicker"></div>
+      <div id="obCount" class="sub" style="margin-top:8px"></div>
+      <div class="f" style="margin-top:10px"><label>Reason</label>
+        <input id="obReason" placeholder="e.g. called in sick, hospital admission"></div>
+      <div class="bar"><button id="obBtn" onclick="obSubmit()">File this leave</button></div>
+    </div>
+    <div class="card">
+      <h2>Delegate approvals</h2>
+      <p class="sub">Let someone approve leave on your behalf — while you are away, or as a standing arrangement. Leave the dates blank if it should run until you end it.</p>
+      <div id="delMsg" class="msg"></div>
+      <div id="delCurrent"></div>
+      <div class="grid" style="margin-top:12px">
+        <div class="f"><label>Who approves for you</label><select id="delWho"></select></div>
+        <div class="f"><label>Note (optional)</label><input id="delNote" placeholder="e.g. cover during annual leave"></div>
+        <div class="f"><label>From (optional)</label><input type="date" id="delFrom"></div>
+        <div class="f"><label>Until (optional)</label><input type="date" id="delTo"></div>
+      </div>
+      <div class="bar"><button onclick="saveDelegate()">Set delegation</button></div>
+    </div>
+  </div></div>
+
+  <!-- MANAGER: team member card -->
+  <div id="memberCard" class="hide"></div>
+
+  <!-- HR CONSOLE -->
+  <div id="hrHome" class="hide">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
+    <button id="hrtab_people" class="ghost" onclick="hrTab('people')" style="border-radius:8px">People</button>
+    <button id="hrtab_contracts" class="ghost" onclick="hrTab('contracts')" style="border-radius:8px">Contracts</button>
+    <button id="hrtab_leave" class="ghost" onclick="hrTab('leave')" style="border-radius:8px">Leave</button>
+    <button id="hrtab_exits" class="ghost" onclick="hrTab('exits')" style="border-radius:8px">Exits</button>
+    <button id="hrtab_data" class="ghost" onclick="hrTab('data')" style="border-radius:8px">Data & reports</button>
+  </div>
+  <div id="hrpane_people" class="hide">
+    <div class="card">
+      <h2>Find an employee</h2>
+      <p class="sub">Type an Employee ID, name, or national ID to open and edit any record. Nothing is edited in the sheet.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <input id="empSearch" placeholder="e.g. EG0001 or Nour" style="flex:1;min-width:220px;padding:10px;border:1px solid #e3e3ee;border-radius:5px;font-size:14px">
+        <button onclick="doSearch()">Search</button>
+      </div>
+      <div id="searchResults" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <h2>New hire intake — from the public form</h2>
+      <p class="sub">Submissions from the public form. Match the ID card, then approve to create the record and issue the Employee ID. Flagged rows need a closer look before approving.</p>
+      <div id="intakeMsg" class="msg"></div>
+      <div id="intakeList"></div>
+    </div>
+    <div class="card">
+      <h2>Records in progress</h2>
+      <p class="sub">Approved hires still being completed — offer details, or awaiting the Konecta email.</p>
+      <div id="hrMsg" class="msg"></div>
+      <div id="hrList"></div>
+    </div>
+  <div class="card">
+      <h2>Needs your attention</h2>
+      <p class="sub">Only what <strong>you</strong> need to fill or action. Fields the employee owns are chased separately and are not listed here. The number shows how many HR fields are still blank.</p>
+      <div id="taskMsg" class="msg"></div>
+      <div id="taskList"></div>
+    </div>
+    <div class="card">
+      <h2>Bank details — awaiting verification</h2>
+      <p class="sub">Employees have submitted bank details. Check them against the ID document, then verify. Payment stays held until you do. Verifying releases the last payment gate.</p>
+      <div id="bankMsg" class="msg"></div>
+      <div id="bankList"></div>
+    </div>
+  <div class="card">
+      <h2>Needs your attention</h2>
+      <p class="sub">Only what <strong>you</strong> need to fill or action. Fields the employee owns are chased separately and are not listed here. The number shows how many HR fields are still blank.</p>
+      <div id="taskMsg" class="msg"></div>
+      <div id="taskList"></div>
+    </div>
+  </div>
+  <div id="hrpane_contracts" class="hide">
+    <div class="card">
+      <h2>Generate a contract</h2>
+      <p class="sub">Fills the template from the record and produces a Word file to print. Anything the record does not hold stays visible as a placeholder, so a gap cannot be missed. Generating does not mark the contract signed — that happens in the file review once it comes back.</p>
+      <div id="ctMsg" class="msg"></div>
+      <div class="grid">
+        <div class="f"><label>Employee ID</label><input id="ctId" placeholder="e.g. EG0123" onblur="ctCheck()"></div>
+        <div class="f"><label>Contract type</label><select id="ctType" onchange="ctTypeChanged()"></select></div>
+      </div>
+      <div id="ctWho" style="margin-top:10px"></div>
+      <div id="ctExtra"></div>
+      <div class="bar"><button id="ctBtn" onclick="ctGenerate()">Generate</button></div>
+      <div id="ctOut" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <h2>Signing appointments</h2>
+      <p class="sub">Who is coming in, and when. Ten a day, Sunday to Thursday — a full day rolls to the next automatically. Print their contracts before the day, then mark what happened: signing writes through to their file and releases their medical enrolment.</p>
+      <div id="sgMsg" class="msg"></div>
+      <div id="sgList"><p class="sub">Loading…</p></div>
+    </div>
+    <div class="card">
+      <h2>Who has not signed</h2>
+      <p class="sub">Everyone who should have a signed contract and does not, longest-serving first. Tick who you want in, and they are booked into the next free days and emailed. You are not picking dates — the queue spreads them.</p>
+      <div id="usMsg" class="msg"></div>
+      <div id="usSummary" class="sub"></div>
+      <div class="bar" style="margin-top:0">
+        <button class="ghost" onclick="usLoad()">Refresh the list</button>
+        <button class="ghost" onclick="usTickAll()">Tick the first 10</button>
+        <button id="usBtn" class="ok hide" onclick="usInvite()">Book the ticked people in</button>
+      </div>
+      <div class="f" style="margin-top:10px"><label>Note to include in their email (optional)</label>
+        <input id="usNote" placeholder="e.g. please bring your national ID"></div>
+      <div id="usList" style="margin-top:12px"><p class="sub">Click Refresh to load.</p></div>
+    </div>
+    <div class="card">
+      <h2>Employee file review</h2>
+      <p class="sub">Working through the physical files. Enter an employee ID, record what is in their file, and save. The physical file stays the record — this is so you can see who is missing what without opening every folder.</p>
+      <div id="frMsg" class="msg"></div>
+      <div id="frProgress" class="sub"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+        <input id="frId" placeholder="Employee ID, e.g. EG0123" style="flex:1;min-width:200px;padding:10px;border:1px solid #e3e3ee;border-radius:5px;font-size:14px" onkeydown="if(event.key==='Enter')openFileReview()">
+        <button onclick="openFileReview()">Open file</button>
+      </div>
+      <div id="frBody" style="margin-top:14px"></div>
+    </div>
+  </div>
+  <div id="hrpane_leave" class="hide">
+    <div class="card">
+      <h2>Leave awaiting HR validation</h2>
+      <p class="sub">Entitled leave — sick, maternity, paternity, compassionate, military. These cannot be refused by a manager. Confirm you have received the document, then validate.</p>
+      <div id="hrLeaveMsg" class="msg"></div>
+      <div id="hrLeaveList"></div>
+    </div>
+    <div class="card">
+      <h2>Leave administration</h2>
+      <p class="sub">Credit people who worked a public holiday, load leave taken before the system went live, and see the days refused this year.</p>
+      <div id="hrAdmMsg" class="msg"></div>
+      <div class="bar" style="margin-top:0">
+        <button class="ghost" onclick="showAdm('hol')">Worked a public holiday</button>
+        <button class="ghost" onclick="showAdm('back')">Load historic leave</button>
+        <button class="ghost" onclick="showAdm('liab')">Refused days report</button>
+        <button class="ghost" onclick="showAdm('attr')">Attrition report</button>
+      </div>
+      <div id="admHol" class="hide" style="margin-top:14px">
+        <p class="sub">Paste the employee IDs of everyone who worked, one per line. Each gets one day added to their balance.</p>
+        <div class="grid">
+          <div class="f"><label>Which public holiday</label><select id="holDate"></select></div>
+          <div class="f"><label>Note (optional)</label><input id="holNote" placeholder="e.g. Beko coverage"></div>
+        </div>
+        <div class="f" style="margin-top:10px"><label>Employee IDs</label>
+          <textarea id="holIds" rows="5" placeholder="EG0123&#10;EG0124&#10;EG0125" style="padding:9px;border:1px solid #e3e3ee;border-radius:5px;font-family:inherit;font-size:14px"></textarea></div>
+        <div class="bar"><button onclick="runHolidayWorked()">Credit these employees</button></div>
+      </div>
+      <div id="admBack" class="hide" style="margin-top:14px">
+        <p class="sub">One line per record: <strong>employee ID, first day, last day, leave type</strong>. These load as already approved — use it for leave taken before the system went live.</p>
+        <div class="f"><label>Records</label>
+          <textarea id="backText" rows="6" placeholder="EG0123, 2026-03-10, 2026-03-12, Annual&#10;EG0124, 2026-04-01, 2026-04-01, Sick" style="padding:9px;border:1px solid #e3e3ee;border-radius:5px;font-family:inherit;font-size:14px"></textarea></div>
+        <div class="bar"><button onclick="runBacklog()">Load these records</button></div>
+        <div id="backResult" class="sub"></div>
+      </div>
+      <div id="admAttr" class="hide" style="margin-top:14px">
+        <p class="sub">Everyone who has left. This is the only place leavers appear — they are hidden from every other view.</p>
+        <div class="grid">
+          <div class="f"><label>Year (blank for all)</label><input id="attrYear" placeholder="2026"></div>
+        </div>
+        <div class="bar"><button onclick="loadAttrition()">Run the report</button></div>
+        <div id="attrOut" style="margin-top:10px"></div>
+      </div>
+      <div id="admLiab" class="hide" style="margin-top:14px">
+        <p class="sub">Annual leave that was requested and refused. Under Egyptian labour law these days must be paid the following year if they go unconsumed.</p>
+        <div class="bar" style="margin-top:0"><button onclick="loadLiability()">Run the report</button></div>
+        <div id="liabOut" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+  <div id="hrpane_exits" class="hide">
+    <div class="card">
+      <h2>Record a departure</h2>
+      <p class="sub">For when someone tells HR directly. A resignation recorded here still goes to the managers to agree the date — it does not take that decision away from them. The employee is emailed either way, so nothing is recorded in their name without their knowledge.</p>
+      <div id="hrDepMsg" class="msg"></div>
+      <div class="bar" style="margin-top:0">
+        <button class="ghost" onclick="showDep('resign')">Resignation</button>
+        <button class="ghost" onclick="showDep('noshow')">No show or drop out</button>
+      </div>
+      <div id="hrDepResign" class="hide" style="margin-top:14px">
+        <div class="grid">
+          <div class="f"><label>Employee ID</label><input id="hrRsId" placeholder="e.g. EG0123"></div>
+          <div class="f"><label>Proposed last working day</label><input type="date" id="hrRsDate"></div>
+          <div class="f"><label>Reason (optional)</label><input id="hrRsReason"></div>
+          <div class="f"><label>Who told you</label><input id="hrRsNote" placeholder="e.g. employee told me in person"></div>
+        </div>
+        <div class="bar"><button onclick="hrSubmitResignation()">Record resignation</button></div>
+      </div>
+      <div id="hrDepNoShow" class="hide" style="margin-top:14px">
+        <div class="grid">
+          <div class="f"><label>What has happened</label>
+            <select id="hrNsType" onchange="hrNsTypeChanged()">
+              <option value="No show">No show — they have stopped turning up, no contact</option>
+              <option value="Drop out">Drop out — they told us they are leaving</option>
+            </select></div>
+          <div class="f"><label>&nbsp;</label><div id="hrNsNote2" class="sub" style="margin:0;line-height:1.4"></div></div>
+          <div class="f"><label>Employee ID</label><input id="hrNsId" placeholder="e.g. EG0123" onblur="hrLookupNs()"></div>
+          <div class="f"><label>&nbsp;</label><div id="hrNsWho" class="sub" style="margin:0;line-height:1.4"></div></div>
+          <div class="f"><label id="hrNsDateLabel">Absent since</label><input type="date" id="hrNsSince"></div>
+          <div class="f"><label>Primary reason for leaving</label><select id="hrNsReason"></select></div>
+          <div class="f"><label>Detail (optional)</label><input id="hrNsDetail"></div>
+          <div class="f"><label>Anything else worth noting</label><input id="hrNsExtra"></div>
+        </div>
+        <div class="f" style="margin-top:10px"><label>Copy anyone else (emails, comma separated)</label>
+          <input id="hrNsCc" placeholder="head.of.training@konecta.com"></div>
+        <div class="warnbox" style="margin-top:12px">This puts their <strong>payment on hold</strong> and opens clearance.</div>
+        <div class="bar"><button onclick="hrSubmitNoShow()">Record it</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Terminations awaiting your decision</h2>
+      <p class="sub">Dismissals raised by managers. Review the evidence before approving — nothing has happened to the employee yet.</p>
+      <div id="tmHrMsg" class="msg"></div>
+      <div id="tmHrList"><p class="sub">Loading…</p></div>
+    </div>
+    <div class="card">
+      <h2>No shows</h2>
+      <p class="sub">People who have stopped turning up. Payment is already on hold. Resolve each one — they came back, or it becomes a termination.</p>
+      <div id="nsHrMsg" class="msg"></div>
+      <div id="nsHrList"><p class="sub">Loading…</p></div>
+    </div>
+    <div class="card">
+      <h2>Clearance</h2>
+      <p class="sub">Departures in progress. Yours is the final gate — nothing is released until you complete exit formalities and notify Comp &amp; Ben.</p>
+      <div id="clMsgHR" class="msg"></div>
+      <div id="clListHR"><p class="sub">Loading…</p></div>
+    </div>
+    <div class="card">
+      <h2>Close historic leavers</h2>
+      <p class="sub">For people who left before the system existed. One line each: <strong>employee ID, last working day, exit type</strong>. This sets the exit date, type and status together — it does <strong>not</strong> open clearance or email anyone, because they are long gone.</p>
+      <div id="lvbMsg" class="msg"></div>
+      <div class="f"><label>Employee ID, last working day, exit type</label>
+        <textarea id="lvbText" rows="6" placeholder="EG0123, 2025-06-30, Resignation&#10;EG0124, 2025-11-15, Contract ended" style="padding:9px;border:1px solid #e3e3ee;border-radius:5px;font-family:inherit;font-size:14px"></textarea></div>
+      <div id="lvbTypes" class="sub" style="margin-top:6px"></div>
+      <div class="bar"><button onclick="lvbPreview()">Preview</button>
+        <button id="lvbApply" class="ok hide" onclick="lvbApply()">Close these records</button></div>
+      <div id="lvbOut" style="margin-top:12px"></div>
+    </div>
+  </div>
+  <div id="hrpane_data" class="hide">
+    <div class="card">
+      <h2>SIK monthly report</h2>
+      <p class="sub">Builds the 59-column group report for one month, from the PAYROLL, EMPLOYEES and LEAVE tabs. Absence is reported in hours. Check the data first — anything missing is listed by field and by person, so it gets fixed on the record rather than patched in the file.</p>
+      <div id="sikMsg" class="msg"></div>
+      <div class="grid">
+        <div class="f"><label>Year</label><input id="sikYear" placeholder="2026"></div>
+        <div class="f"><label>Month</label><select id="sikMonth">
+          <option value="1">January</option><option value="2">February</option>
+          <option value="3">March</option><option value="4">April</option>
+          <option value="5">May</option><option value="6">June</option>
+          <option value="7">July</option><option value="8">August</option>
+          <option value="9">September</option><option value="10">October</option>
+          <option value="11">November</option><option value="12">December</option>
+        </select></div>
+      </div>
+      <div class="bar"><button onclick="runSikCheck()">Check the data first</button><button id="sikBuild" class="ok hide" onclick="runSik()">Build the report</button></div>
+      <div id="sikOut" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <h2>Bulk update a field</h2>
+      <p class="sub">Paste <strong>employee ID, new value</strong> one per line. Preview shows you what would change before anything is written. Every change is logged individually.</p>
+      <div id="buMsg" class="msg"></div>
+      <div class="grid">
+        <div class="f"><label>Which field</label><select id="buField"></select></div>
+        <div class="f"><label>&nbsp;</label><div id="buHint" class="sub" style="margin:0;line-height:1.4"></div></div>
+      </div>
+      <div class="f" style="margin-top:10px"><label>Employee ID, new value</label>
+        <textarea id="buText" rows="6" placeholder="EG0123, EG0044&#10;EG0124, EG0044&#10;EG0125, EG0021" style="padding:9px;border:1px solid #e3e3ee;border-radius:5px;font-family:inherit;font-size:14px"></textarea></div>
+      <div class="bar"><button onclick="buPreview()">Preview changes</button>
+        <button id="buApply" class="ok hide" onclick="buApply()">Apply</button></div>
+      <div id="buOut" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <h2>Career history</h2>
+      <p class="sub">Everything that has moved for one person — job title, level, salary, managers — pulled from the change log and grouped by date. Address and contact changes are left out.</p>
+      <div id="chMsg" class="msg"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <input id="chId" placeholder="Employee ID, e.g. EG0123" style="flex:1;min-width:200px;padding:10px;border:1px solid #e3e3ee;border-radius:5px;font-size:14px" onkeydown="if(event.key==='Enter')loadCareer()">
+        <button onclick="loadCareer()">Open</button>
+      </div>
+      <div id="chOut" style="margin-top:14px"></div>
+    </div>
+    <div class="card">
+      <h2>Medical insurance</h2>
+      <p class="sub">Enrol a new joiner once their contract is signed and their record is complete. Stop cover as soon as you know someone is leaving — this is not held up by clearance, because cover has to end on the last working day whether or not the laptop is back.</p>
+      <div id="medMsg" class="msg"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <input id="medId" placeholder="Employee ID" style="flex:1;min-width:180px;padding:10px;border:1px solid #e3e3ee;border-radius:5px;font-size:14px">
+        <input id="medNote" placeholder="Note (optional)" style="flex:1;min-width:180px;padding:10px;border:1px solid #e3e3ee;border-radius:5px;font-size:14px">
+        <button class="ok" onclick="medAction('enrol')">Enrol</button>
+        <button class="ghost" onclick="medAction('remove')">Stop cover</button>
+      </div>
+      <div id="medOutstanding" style="margin-top:14px"></div>
+    </div>
+  </div>
+</div>
+  <div id="hrDetail" class="hide"></div>
+
+  <!-- HR FULL RECORD EDITOR -->
+  <div id="hrEditor" class="hide"></div>
+
+  <!-- LEAVE REQUEST (placeholder) -->
+  <div id="leaveView" class="hide"><div class="wrap" style="padding-top:0">
+    <div class="card">
+      <h2>Leave balance</h2>
+      <div id="leaveBal"><p class="sub">Loading…</p></div>
+    </div>
+    <div class="card">
+      <h2>Request leave</h2>
+      <p class="sub">Whole days only. Weekends and public holidays are not counted.</p>
+      <div id="lvMsg" class="msg"></div>
+      <div class="grid">
+        <div class="f"><label>Leave type</label><select id="lvType" onchange="lvTypeChanged()"></select></div>
+        <div class="f"><label>&nbsp;</label><div id="lvTypeNote" class="sub" style="margin:0;line-height:1.4"></div></div>
+        <div class="f"><label>First day</label><input type="date" id="lvStart" onchange="lvDatesChanged()"></div>
+        <div class="f"><label>Last day</label><input type="date" id="lvEnd" onchange="lvDatesChanged()"></div>
+      </div>
+      <div id="lvPicker"></div>
+      <div id="lvCount" class="sub" style="margin-top:8px"></div>
+      <div class="grid" style="margin-top:10px">
+        <div class="f"><label>Reason</label><input id="lvReason" placeholder="Optional"></div>
+      </div>
+      <div id="lvManagers"></div>
+      <div class="bar"><button id="lvBtn" onclick="submitLeave()">Submit request</button></div>
+    </div>
+    <div class="card">
+      <h2>My requests this year</h2>
+      <div id="lvHistory"><p class="sub">Loading…</p></div>
+      <div class="bar"><button class="ghost" onclick="toggleBalIssue()">My balance looks wrong</button></div>
+      <div id="balIssueBox" class="hide" style="margin-top:12px">
+        <div id="balIssueMsg" class="msg"></div>
+        <div class="f"><label>What looks wrong?</label>
+          <input id="balIssueText" placeholder="e.g. I worked the holiday on 26 August but have not been credited"></div>
+        <div class="bar"><button onclick="sendBalIssue()">Send to HR</button></div>
+      </div>
+    </div>
+  </div></div>
+
+  <!-- RESIGNATION (placeholder) -->
+  <div id="letterView" class="hide"><div class="wrap" style="padding-top:0"><div class="card"><h2>Request an HR Letter</h2><p class="sub">Salary certificate, employment letter, bank letter, and more.</p><div class="warnbox">Coming soon. Request letters from HR directly for now.</div></div></div></div>
+  <div id="contractView" class="hide"><div class="wrap" style="padding-top:0">
+    <div id="contractBody"><p class="sub">Loading…</p></div>
+  </div></div>
+  <div id="payslipView" class="hide"><div class="wrap" style="padding-top:0">
+    <div id="payslipBody"><p class="sub">Loading…</p></div>
+  </div></div>
+  <div id="resignView" class="hide"><div class="wrap" style="padding-top:0">
+    <div id="resignBody"><p class="sub">Loading…</p></div>
+  </div></div>
+
+  <!-- NO SHOW -->
+  <div id="noshowView" class="hide"><div class="wrap" style="padding-top:0">
+    <div class="card">
+      <h2>Report a departure</h2>
+      <p class="sub">Anyone can report this — you do not have to be their manager. Use it whether someone has stopped turning up, or has told you they are leaving.</p>
+      <div id="nsMsg" class="msg"></div>
+      <div class="grid">
+        <div class="f"><label>What has happened</label>
+          <select id="nsType" onchange="nsTypeChanged()">
+            <option value="No show">No show — they have stopped turning up, no contact</option>
+            <option value="Drop out">Drop out — they told us they are leaving</option>
+          </select></div>
+        <div class="f"><label>&nbsp;</label><div id="nsTypeNote" class="sub" style="margin:0;line-height:1.4"></div></div>
+        <div class="f"><label>Employee ID</label>
+          <input id="nsId" placeholder="e.g. EG0123" onblur="lookupNoShow()"></div>
+        <div class="f"><label>&nbsp;</label><div id="nsWho" class="sub" style="margin:0;line-height:1.4"></div></div>
+        <div class="f"><label id="nsDateLabel">Absent since</label><input type="date" id="nsSince"></div>
+        <div class="f"><label>Primary reason for leaving</label>
+          <select id="nsReason"></select></div>
+        <div class="f"><label>Detail (optional)</label>
+          <input id="nsDetail" placeholder="e.g. moved to Alexandria, night shift"></div>
+        <div class="f"><label>Anything else worth noting</label><input id="nsNote"></div>
+      </div>
+      <div class="f" style="margin-top:10px"><label>Copy anyone else (emails, comma separated)</label>
+        <input id="nsCc" placeholder="head.of.training@konecta.com, project.manager@konecta.com"></div>
+      <p class="sub" style="margin-top:6px">HR, this person's managers, and your own manager are copied automatically. Add anyone else who needs to know.</p>
+      <div class="warnbox" style="margin-top:12px">This puts their <strong>payment on hold</strong> and opens clearance so equipment can be recovered. Please be sure before you submit.</div>
+      <div class="bar"><button onclick="submitNoShow()">Submit</button></div>
+    </div>
+  </div></div>
+
+  <!-- IT PANEL -->
+  <div id="itHome" class="hide">
+   <div class="card">
+    <h2>Clearance — equipment to collect</h2>
+    <p class="sub">Record what came back. Anything marked not returned is charged against the final payout, so please mark items honestly.</p>
+    <div id="clMsgIT" class="msg"></div>
+    <div id="clListIT"><p class="sub">Loading…</p></div>
+   </div>
+   <div class="card">
+    <h2>IT — create Konecta emails</h2>
+    <p class="sub">Identity-verified joiners awaiting a Konecta email. Enter it and save.</p>
+    <div id="itMsg" class="msg"></div>
+    <div id="itList"></div>
+   </div>
+  </div>
+
+  <!-- FACILITIES PANEL -->
+  <div id="facHome" class="hide"><div class="wrap" style="padding-top:0">
+    <div class="card">
+      <h2>Facilities — items to collect</h2>
+      <p class="sub">Record what came back. Anything marked not returned is charged against the final payout.</p>
+      <div id="clMsgFAC" class="msg"></div>
+      <div id="clListFAC"><p class="sub">Loading…</p></div>
+    </div>
+  </div></div>
+</div>
+
+<script>
+var LISTS={},PROJMAP={},MANAGERS={managers:[],globals:[],others:[]},ROLE=null,REC=null,CURRENT=null;
+var LABELS={national_id:'National ID',passport_number:'Passport number',full_name_en:'Full name (English)',full_name_ar:'Full name (Arabic)',
+ personal_email:'Personal email',konecta_email:'Konecta email',mobile:'Mobile',date_of_birth:'Date of birth',
+ gender:'Gender',nationality:'Nationality',religion:'Religion',education_level:'Highest qualification',has_disability:'Any disability?',marital_status:'Marital status',
+ dependants:'Number of dependants',address:'Address',city:'City',governorate:'Governorate',
+ emergency_contact_name:'Emergency contact — name',emergency_contact_phone:'Emergency contact — phone',
+ emergency_contact_relation:'Emergency contact — relationship',insurance_number:'Social insurance number',
+ bank_name:'Bank',account_number:'Account number',iban:'IBAN',employee_id:'Employee ID',
+ record_status:'Status',national_id_verified:'ID verified',hire_date:'Hire date',contract_end_date:'Contract end date',probation_end_date:'Probation end date',notice_period:'Notice period',n_level:'N-Level',job_family:'Job family',gcm:'GCM level',job_title:'Job title',
+ grade:'Job level',function:'Function',subfunction:'Subfunction',contract_type:'Contract term',
+ manager_id:'Manager',work_location:'Work location',offer_ref:'Offer ref',basic_salary:'Basic salary (EGP)',
+ kpi_target:'KPI target',bonus_plan:'Bonus plan',bonus_annual:'Annual bonus at 100% (EGP)',bonus_monthly:'Monthly bonus at 100% (EGP)',kpi_frequency:'Bonus plan',incentive:'Incentive plan',transportation:'Transportation eligible?',
+ bank_verified:'Bank verified',medical_status:'Medical insurance',payment_status:'Payment status',training_contract:'Training contract',
+ company_type:'Employment relationship',cost_centre:'Cost centre',work_modality:'Work modality',
+ employee_classification:'Classification',scope:'Scope',digital_flag:'Digital',bench_flag:'Bench',
+ variable_plan:'Variable plan',hiring_reason:'Hiring reason',contract_time:'Contract time (hours)',
+ corporation_code:'Corporation code',agreement_hours_cba:'Agreement hours',contract_hours:'Contract hours',
+ dependant1_name:'Dependant 1 — name',dependant1_dob:'Dependant 1 — date of birth',dependant1_relation:'Dependant 1 — relationship',dependant1_national_id:'Dependant 1 — national ID',
+ dependant2_name:'Dependant 2 — name',dependant2_dob:'Dependant 2 — date of birth',dependant2_relation:'Dependant 2 — relationship',dependant2_national_id:'Dependant 2 — national ID',
+ dependant3_name:'Dependant 3 — name',dependant3_dob:'Dependant 3 — date of birth',dependant3_relation:'Dependant 3 — relationship'};
+var LISTOF={gender:'gender',has_disability:'has_disability',marital_status:'marital_status',governorate:'governorate',nationality:'nationality',religion:'religion',education_level:'education_level',
+ bank_name:'bank_name',contract_type:'contract_type',kpi_frequency:'kpi_frequency',training_contract:'training_contract',
+ company_type:'company_type',work_modality:'work_modality',employee_classification:'employee_classification',
+ scope:'scope',digital_flag:'digital_flag',bench_flag:'bench_flag',variable_plan:'variable_plan',
+ contract_time:'contract_time',hiring_reason:'hiring_reason',kpi_frequency:'kpi_frequency',transportation:'transportation',incentive:'incentive',grade:'grade',gcm:'gcm',project:'__project__',direct_manager:'__manager__',dotted_manager:'__manager__',
+ dependant1_relation:'dependant1_relation',dependant2_relation:'dependant2_relation',dependant3_relation:'dependant3_relation'};
+var NEW_IDENTITY=['national_id','full_name_en','full_name_ar','personal_email','mobile'];
+var NEW_PERSONAL=['date_of_birth','gender','nationality','has_disability','marital_status','address','city','governorate',
+ 'emergency_contact_name','emergency_contact_phone','emergency_contact_relation','insurance_number'];
+var HR_FIELDS=['hire_date','job_title','grade','function','subfunction','contract_type','manager_id','work_location',
+ 'offer_ref','basic_salary','kpi_target','kpi_frequency','incentive','transportation','training_contract','company_type',
+ 'cost_centre','work_modality','employee_classification','scope','digital_flag','bench_flag','variable_plan','hiring_reason',
+ 'contract_time','corporation_code','agreement_hours_cba','contract_hours'];
+var GATE2=['hire_date','job_title','function','contract_type','manager_id','basic_salary'];
+
+function lbl(f){return LABELS[f]||f}
+function el(id){return document.getElementById(id)}
+function show(id){el(id).classList.remove('hide')}
+function hide(id){el(id).classList.add('hide')}
+function msg(id,t,k){var m=el(id);m.textContent=t;m.className='msg '+k}
+function field(f,val,list){var v=val==null?'':val;
+  if(list==='__manager__'){
+    var o='<option value=""></option>';
+    var grp=function(title,arr){
+      if(!arr||!arr.length) return '';
+      var g='<optgroup label="'+title+'">';
+      arr.forEach(function(m){ g+='<option value="'+esc(m.id)+'" '+(m.id==v?'selected':'')+'>'+m.label+'</option>'; });
+      return g+'</optgroup>';
+    };
+    o+=grp('Current managers', MANAGERS.managers);
+    o+=grp('Global managers', MANAGERS.globals);
+    o+=grp('All other employees', MANAGERS.others);
+    return '<div class="f"><label>'+lbl(f)+'</label><select data-f="'+f+'">'+o+'</select></div>';
+  }
+  if(list==='__project__'){
+    var o='<option value=""></option>';
+    Object.keys(PROJMAP).sort().forEach(function(x){o+='<option '+(x==v?'selected':'')+'>'+x+'</option>';});
+    return '<div class="f"><label>'+lbl(f)+'</label><select data-f="project" onchange="fillCostCentre(this.value)">'+o+'</select></div>';
+  }
+  if(list&&LISTS[list]){var o='<option value=""></option>';
+    LISTS[list].forEach(function(x){o+='<option '+(x==v?'selected':'')+'>'+x+'</option>'});
+    return '<div class="f"><label>'+lbl(f)+'</label><select data-f="'+f+'">'+o+'</select></div>';}
+  var t=f.indexOf('date')>-1||f.indexOf('dob')>-1?'date':(f==='dependants'?'number':'text');
+  return '<div class="f"><label>'+lbl(f)+'</label><input type="'+t+'" data-f="'+f+'" value="'+String(v).replace(/"/g,'&quot;')+'"></div>';}
+function collect(c){var o={};el(c).querySelectorAll('[data-f]').forEach(function(i){o[i.dataset.f]=i.value});return o}
+
+// ---- boot: role first ----
+// single round trip on load instead of four
+google.script.run.withSuccessHandler(function(b){
+  LISTS=b.lists||{}; PROJMAP=b.projmap||{}; MANAGERS=b.managers||{managers:[],globals:[],others:[]};
+  if(b.record){ BOOT_RECORD=b.record; }
+  if(b.team){ gotTeam(b.team); }
+  routeByRole(b.role);
+}).withFailureHandler(fail).getBootstrap();
+var BOOT_RECORD=null;
+function fail(e){el('loading').innerHTML='<span style="color:#c62828">'+e.message+'</span>'}
+
+function routeByRole(role){
+  ROLE=role; el('who').textContent=role.email; hide('loading'); setTimeout(function(){var sb=el('empSearch'); if(sb) sb.addEventListener('keydown',empSearchEnter);},300);
+  if(role.hr){
+    // HR sees the console, not the employee tab strip — those tabs are for
+    // someone looking at their own record, and clicking them from here does nothing.
+    // HR does not need the personal tabs, but does need the departure form —
+    // people resign to HR in person and never tell their manager.
+    hide('tabBar');
+    show('roleBadge'); el('roleBadge').textContent='HR CONSOLE'; loadHR(); return;
+  }
+  if(role.it){ hide('tabBar'); show('roleBadge'); el('roleBadge').textContent='IT PANEL'; loadIT(); return; }
+  if(role.fac){ hide('tabBar'); show('roleBadge'); el('roleBadge').textContent='FACILITIES'; show('facHome'); loadClearance('FAC'); return; }
+  if(BOOT_RECORD){ renderEmployee(BOOT_RECORD); if(BOOT_RECORD.found){ show('tabBar'); showTab('details'); } }
+  else { google.script.run.withSuccessHandler(function(r){ renderEmployee(r); if(r.found){ show('tabBar'); showTab('details'); } }).withFailureHandler(fail).getMyRecord(); }
+}
+
+// ================= EMPLOYEE =================
+
+var MYTEAM=null;
+function gotTeam(res){
+  MYTEAM=res;
+  if(res && res.isManager && res.team && res.team.length){
+    el('tabTeam').classList.remove('hide');   // reveal My Team tab
+  }
+}
+function showTab(which){
+  var panels={details:'main',team:'teamView',leave:'leaveView',resign:'resignView',letter:'letterView',contract:'contractView',noshow:'noshowView',payslip:'payslipView'};
+  var btns={details:'tabDetails',team:'tabTeam',leave:'tabLeave',resign:'tabResign',letter:'tabLetter',contract:'tabContract',noshow:'tabNoShow',payslip:'tabPayslip'};
+  Object.keys(panels).forEach(function(k){ hide(panels[k]); });
+  hide('memberCard');
+  show(panels[which]);
+  Object.keys(btns).forEach(function(k){
+    var b=el(btns[k]); if(!b) return;
+    var teamHidden = (k==='team' && (!MYTEAM||!MYTEAM.isManager||!MYTEAM.team.length));
+    b.className = (k===which ? '' : 'ghost') + (teamHidden ? ' hide' : '');
+  });
+  if(which==='team'){ renderTeam(); loadApprovals(); loadDelegates(); loadResignApprovals(); loadClearance(''); }
+  if(which==='leave') loadLeave();
+  if(which==='resign') loadResignation();
+  if(which==='contract') loadMyContract();
+  if(which==='payslip') loadMyPayslip();
+  if(which==='noshow'){ fillReasons(); nsTypeChanged(); }
+}
+function renderTeam(){
+  if(!MYTEAM||!MYTEAM.team.length){el('teamList').innerHTML='<p class="sub">No one reports to you yet.</p>';return;}
+  var h='';MYTEAM.team.forEach(function(m){
+    h+='<div class="qitem" onclick="openMember('+m.row+')"><div>'+
+       '<div class="nm">'+(m.full_name_en||'(no name)')+'</div>'+
+       '<div class="meta">'+(m.employee_id||'')+' &middot; '+(m.job_title||'')+(m.project?(' &middot; '+m.project):'')+'</div></div>'+
+       '<span style="color:#2800C8">view &rsaquo;</span></div>';
+  });
+  el('teamList').innerHTML=h;
+}
+var CURRENT_MEMBER_ROW=null;
+function openMember(row){
+  CURRENT_MEMBER_ROW=row;
+  hide('teamView'); show('memberCard');
+  el('memberCard').innerHTML='<div class="wrap" style="padding-top:0"><p class="sub">Loading…</p></div>';
+  google.script.run.withSuccessHandler(renderMember).withFailureHandler(function(e){
+    el('memberCard').innerHTML='<div class="wrap"><span style="color:#c62828">'+e.message+'</span></div>';
+  }).getTeamMemberCard(row);
+}
+function renderMember(c){
+  var rows=[
+    ['Name',c.full_name_en],['Konecta email',c.konecta_email],['Mobile',c.mobile],
+    ['Job title',c.job_title],['Hire date',c.hire_date],
+    ['Date of birth',c.date_of_birth],['Age',c.age],
+    ['Project / assignment',c.project],['Basic salary (EGP)',c.basic_salary],
+    ['Disability (PWD)',c.has_disability]
+  ];
+  var h='<div class="wrap" style="padding-top:0">'+
+    '<span class="back" onclick="backToTeam()">&larr; back to my team</span>'+
+    '<div class="card"><h2>'+(c.full_name_en||'Team member')+'</h2>'+
+    '<p class="sub">View only. Contact HR for any changes to these details.</p><div class="ro">';
+  rows.forEach(function(r){ h+='<div class="row"><span class="k">'+r[0]+'</span><span class="v">'+(r[1]||'—')+'</span></div>'; });
+  h+='</div></div>';
+  // editable block — the two fields a manager owns
+  h+='<div class="card"><h2>Set by you</h2>'+
+     '<p class="sub">These two are yours to maintain for your team.</p>'+
+     '<div id="mgrMsg" class="msg"></div><div class="grid" id="mgrFields">'+
+       field('grade', c.grade, LISTOF['grade'])+
+       field('gcm', c.gcm, LISTOF['gcm'])+
+     '</div><div class="bar"><button onclick="saveMember()">Save</button></div></div>';
+  h+='</div>';
+  el('memberCard').innerHTML=h;
+  el('memberCard').dataset.row=c._row||CURRENT_MEMBER_ROW;
+}
+function saveMember(){
+  var data={}; el('mgrFields').querySelectorAll('[data-f]').forEach(function(i){data[i.dataset.f]=i.value;});
+  msg('mgrMsg','Saving…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('mgrMsg', res.count? (res.count+' field(s) saved.') : 'Nothing changed.','ok');
+  }).withFailureHandler(function(e){msg('mgrMsg',e.message,'err');})
+   .managerSaveTeamMember(CURRENT_MEMBER_ROW, data);
+}
+function backToTeam(){ hide('memberCard'); show('teamView'); }
+
+function renderEmployee(r){
+  REC=r;
+  if(!r.found){ el('whoEmail').textContent=r.email; show('choice'); return; }
+  show('main');
+  var p=parseInt(r.completeness)||0;
+  var h='<div class="card"><h2>Record completeness</h2><div class="prog"><i style="width:'+p+'%"></i></div>'+
+    '<p class="sub">'+p+'% complete</p>';
+  if(r.blocking&&r.blocking.trim()) h+='<div class="gaps"><strong>Missing — will hold your payment:</strong><br>'+r.blocking.trim().split(/\s+/).map(lbl).join(' &middot; ')+'</div>';
+  if(r.chase&&r.chase.trim()) h+='<div class="gaps chase"><br><strong>Also missing:</strong><br>'+r.chase.trim().split(/\s+/).map(lbl).join(' &middot; ')+'</div>';
+  if(!(r.blocking&&r.blocking.trim())&&!(r.chase&&r.chase.trim())) h+='<div style="color:#2e7d32">Your record is complete.</div>';
+  h+='</div>';
+  // read-only
+  h+='<div class="card"><h2>Employment details</h2><p class="sub">Held by HR. If something is wrong use Report incorrect data — it opens a ticket.</p><div class="ro">';
+  Object.keys(r.readonly).forEach(function(k){h+='<div class="row"><span class="k">'+lbl(k)+'</span><span class="v">'+(r.readonly[k]||'—')+'</span></div>'});
+  h+='</div><div class="bar"><button class="ghost" onclick="toggleIssue()">Report incorrect data</button></div><div id="issueBox" class="hide" style="margin-top:14px"></div></div>';
+  // editable
+  h+='<div class="card"><h2>Personal details</h2><p class="sub">You can update these. Changes apply immediately and are recorded.</p><div id="edMsg" class="msg"></div><div class="grid" id="edFields"></div><div class="bar"><button onclick="savePersonal()">Save changes</button></div></div>';
+  // bank
+  h+='<div class="card"><h2>Bank details <span class="badge">HR verification</span></h2><p class="sub">Submitting does not change them immediately. HR verifies against your ID first.</p><div id="bkMsg" class="msg"></div><div class="grid" id="bkFields"></div><div class="bar"><button onclick="saveBank()">Submit bank change</button></div></div>';
+  el('main').innerHTML=h;
+  el('edFields').innerHTML=renderEditable(r.editable);
+  wireDependants(); wireAddress(r.editable.address);
+  var b='';Object.keys(r.bank).forEach(function(k){b+=field(k,r.bank[k],LISTOF[k])});el('bkFields').innerHTML=b;
+}
+
+// Logical field order for the employee section
+var ED_ORDER=['full_name_en','full_name_ar','personal_email',
+  'date_of_birth','nationality','passport_number','religion','education_level','has_disability','marital_status',
+  'mobile','_address','city','governorate',
+  'emergency_contact_name','emergency_contact_phone','emergency_contact_relation',
+  'insurance_number'];
+
+function renderEditable(ed){
+  var h='<div class="grid">';
+  ED_ORDER.forEach(function(k){
+    if(k==='_address'){ h+=addressBlock(ed.address); return; }
+    if(k==='dependants'){ return; } // handled below, full width
+    h+=field(k,ed[k],LISTOF[k]);
+  });
+  h+='</div>';
+  // dependants live on their own tab now — rendered separately, no cap
+  h+='<h3>Dependants (for medical insurance)</h3>';
+  h+='<div id="depBox"><p class="sub">Loading…</p></div>';
+  return h;
+}
+
+// Address split into structured parts; combined into the single address cell on save.
+function addressBlock(addr){
+  var parts=parseAddress(addr);
+  return ''+
+   '<div class="f"><label>Street name / number</label><input data-addr="street" value="'+esc(parts.street)+'"></div>'+
+   '<div class="f"><label>Building number</label><input data-addr="building" value="'+esc(parts.building)+'"></div>'+
+   '<div class="f"><label>Apartment number</label><input data-addr="apartment" value="'+esc(parts.apartment)+'"></div>';
+}
+function parseAddress(a){
+  a=String(a||''); var p=a.split(',').map(function(x){return x.trim();});
+  return {street:p[0]||'', building:p[1]||'', apartment:p[2]||''};
+}
+function esc(v){return String(v==null?'':v).replace(/"/g,'&quot;');}
+function wireAddress(){/* nothing to wire; combined at save */}
+
+// ---------- dependants: their own tab, no cap ----------
+var MYDEPS=null;
+
+function wireDependants(){ loadMyDependants(); }
+
+function loadMyDependants(){
+  google.script.run.withSuccessHandler(function(d){
+    MYDEPS=d;
+    renderDependants();
+  }).withFailureHandler(function(e){
+    el('depBox').innerHTML='<p class="sub" style="color:#c62828">'+e.message+'</p>';
+  }).getMyDependants();
+}
+
+function renderDependants(){
+  if(!MYDEPS||!MYDEPS.found){ el('depBox').innerHTML='<p class="sub">Not available.</p>'; return; }
+  var list=MYDEPS.dependants||[];
+  var h='<div id="depMsg" class="msg"></div>';
+  h+='<p class="sub">The company covers up to <strong>'+MYDEPS.limit+'</strong> dependants. '+
+     'You can add more — anything beyond '+MYDEPS.limit+' is paid by you, and HR will confirm the cost before adding them.</p>';
+
+  var locked=list.filter(function(d){return d.locked;});
+  var open=list.filter(function(d){return !d.locked;});
+
+  if(locked.length){
+    h+='<p class="sub" style="margin:14px 0 6px"><strong>Already covered</strong> — contact HR to change these.</p>';
+    locked.forEach(function(d){
+      h+='<div class="qitem" style="cursor:default"><div>'+
+         '<div class="nm">'+d.name+'</div>'+
+         '<div class="meta">'+(d.relation||'—')+(d.date_of_birth?(' &middot; born '+d.date_of_birth):'')+
+         (d.funding==='Employee-paid'?' &middot; paid by you':'')+'</div></div>'+
+         '<span class="pill verified">'+d.status+'</span></div>';
+    });
+  }
+
+  h+='<p class="sub" style="margin:14px 0 6px"><strong>Your dependants</strong></p>';
+  h+='<div id="depRows"></div>';
+  h+='<div class="bar"><button class="ghost" onclick="addDepRow()">Add a dependant</button>'+
+     '<button onclick="saveDependants()">Save dependants</button></div>';
+  el('depBox').innerHTML=h;
+
+  DEPDRAFT = open.map(function(d){
+    return {name:d.name, date_of_birth:d.date_of_birth, relation:d.relation,
+            national_id:d.national_id, status:d.status};
+  });
+  drawDepRows();
+}
+
+var DEPDRAFT=[];
+function addDepRow(){ DEPDRAFT.push({name:'',date_of_birth:'',relation:'',national_id:'',status:'new'}); drawDepRows(); }
+function removeDepRow(i){ DEPDRAFT.splice(i,1); drawDepRows(); }
+
+function drawDepRows(){
+  var box=el('depRows'); if(!box) return;
+  if(!DEPDRAFT.length){ box.innerHTML='<p class="sub">None added yet.</p>'; return; }
+  var lockedCount=(MYDEPS.dependants||[]).filter(function(d){return d.locked;}).length;
+  var rels=(LISTS['dependant1_relation']||['Spouse','Child']);
+  var h='';
+  DEPDRAFT.forEach(function(d,i){
+    var no=lockedCount+i+1;
+    var paid = no>MYDEPS.limit;
+    var o='<option value=""></option>';
+    rels.forEach(function(x){ o+='<option'+(x===d.relation?' selected':'')+'>'+x+'</option>'; });
+    h+='<div style="border:1px solid '+(paid?'#FFE082':'#e3e3ee')+';background:'+(paid?'#fffdf5':'#fff')+
+       ';border-radius:6px;padding:12px;margin-bottom:10px">'+
+       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+       '<strong style="font-size:13px;color:#2800C8">Dependant '+no+'</strong>'+
+       (paid? '<span class="pill pending">you pay for this one</span>':'')+
+       '</div><div class="grid">'+
+       '<div class="f"><label>Full name</label><input data-dep="name" data-i="'+i+'" value="'+esc(d.name)+'"></div>'+
+       '<div class="f"><label>Date of birth</label><input type="date" data-dep="date_of_birth" data-i="'+i+'" value="'+esc(d.date_of_birth)+'"></div>'+
+       '<div class="f"><label>Relationship</label><select data-dep="relation" data-i="'+i+'">'+o+'</select></div>'+
+       '<div class="f"><label>National ID</label><input data-dep="national_id" data-i="'+i+'" value="'+esc(d.national_id)+'"></div>'+
+       '</div>'+
+       '<div class="bar" style="margin-top:8px"><button class="ghost" style="padding:6px 12px;font-size:12px" onclick="removeDepRow('+i+')">Remove</button></div>'+
+       '</div>';
+  });
+  box.innerHTML=h;
+  box.querySelectorAll('[data-dep]').forEach(function(inp){
+    inp.addEventListener('change',function(){
+      DEPDRAFT[parseInt(inp.dataset.i)][inp.dataset.dep]=inp.value;
+    });
+  });
+}
+
+function saveDependants(){
+  el('depRows').querySelectorAll('[data-dep]').forEach(function(inp){
+    DEPDRAFT[parseInt(inp.dataset.i)][inp.dataset.dep]=inp.value;
+  });
+  var bad=DEPDRAFT.filter(function(d){ return d.name.trim() && !d.relation; });
+  if(bad.length){ msg('depMsg','Choose a relationship for every dependant — it decides which certificate we ask you for.','err'); return; }
+  msg('depMsg','Saving…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('depMsg',res.msg,res.ok?'ok':'err');
+    if(res.ok) loadMyDependants();
+  }).withFailureHandler(function(e){msg('depMsg',e.message,'err');})
+   .saveMyDependants(DEPDRAFT.filter(function(d){return d.name.trim();}));
+}
+
+function toggleIssue(){var x=el('issueBox');x.classList.toggle('hide');
+  if(!x.innerHTML){var o='';Object.keys(REC.readonly).forEach(function(k){o+='<option value="'+k+'">'+lbl(k)+'</option>'});
+    x.innerHTML='<div class="grid"><div class="f"><label>Which field?</label><select id="isF">'+o+'</select></div><div class="f"><label>What is correct?</label><input id="isT"></div></div><div class="bar"><button onclick="sendIssue()">Send to HR</button></div>';}}
+function sendIssue(){var f=el('isF').value,t=el('isT').value.trim();if(!t){alert('Describe the issue.');return}
+  google.script.run.withSuccessHandler(function(){alert('Sent to HR. Your record was not changed.');toggleIssue()}).reportIssue(f,t)}
+function savePersonal(){msg('edMsg','Saving…','warn');
+  var data=collect('edFields');
+  // combine structured address parts into the single address field
+  var ab=el('edFields').querySelectorAll('[data-addr]');
+  if(ab.length){
+    var m={}; ab.forEach(function(i){m[i.dataset.addr]=i.value.trim();});
+    data.address=[m.street,m.building,m.apartment].filter(function(x){return x!=='';}).join(', ');
+  }
+  google.script.run.withSuccessHandler(function(res){msg('edMsg',res.count?res.count+' field(s) updated.':'Nothing changed.','ok')}).withFailureHandler(function(e){msg('edMsg',e.message,'err')}).submitPersonalUpdate(data)}
+function saveBank(){msg('bkMsg','Submitting…','warn');
+  google.script.run.withSuccessHandler(function(res){msg('bkMsg',res.msg,res.ok?'ok':'err')}).withFailureHandler(function(e){msg('bkMsg',e.message,'err')}).submitBankChange(collect('bkFields'))}
+
+// ================= HR =================
+
+// ===== HR record search + full editor =====
+function doSearch(){
+  var term=el('empSearch').value.trim();
+  if(!term){el('searchResults').innerHTML='';return;}
+  el('searchResults').innerHTML='<p class="sub">Searching…</p>';
+  google.script.run.withSuccessHandler(function(rows){
+    if(!rows.length){el('searchResults').innerHTML='<p class="sub">No match.</p>';return;}
+    var h='';rows.forEach(function(r){
+      h+='<div class="qitem" onclick="openEditor('+r.row+')"><div>'+
+         '<div class="nm">'+(r.full_name_en||'(no name)')+'</div>'+
+         '<div class="meta">'+(r.employee_id||'no ID')+' &middot; '+r.record_status+'</div></div>'+
+         '<span class="pill '+(parseInt(r.completeness)>=100?'verified':'pending')+'">'+(r.completeness||0)+'%</span></div>';
+    });
+    el('searchResults').innerHTML=h;
+  }).withFailureHandler(function(e){el('searchResults').innerHTML='<p class="sub" style="color:#c62828">'+e.message+'</p>';}).hrSearchEmployees(term);
+}
+function empSearchEnter(ev){ if(ev.key==='Enter') doSearch(); }
+
+// field groups for the editor
+var EDITOR_GROUPS=[
+  ['Identity',['national_id','national_id_verified','passport_number','full_name_en','full_name_ar','personal_email','mobile','konecta_email','record_status']],
+  ['Personal',['date_of_birth','gender','nationality','religion','education_level','has_disability','marital_status','address','city','governorate','emergency_contact_name','emergency_contact_phone','emergency_contact_relation']],
+  ['Dependants',['dependants','dependant1_name','dependant1_dob','dependant1_relation','dependant1_national_id','dependant2_name','dependant2_dob','dependant2_relation','dependant2_national_id','dependant3_name','dependant3_dob','dependant3_relation','dependant3_national_id']],
+  ['Employment & Reporting',['hire_date','job_title','grade','n_level','job_family','gcm','function','subfunction','contract_type','contract_time','contract_end_date','probation_end_date','notice_period','direct_manager','dotted_manager','project','work_location','offer_ref','reporting_validated']],
+  ['Compensation',['basic_salary','kpi_target','kpi_frequency','incentive','transportation']],
+  ['Global Report',['company_type','cost_centre','work_modality','employee_classification','scope','digital_flag','bench_flag','variable_plan','hiring_reason','corporation_code','agreement_hours_cba','contract_hours']],
+  ['Statutory & Bank',['insurance_number','bank_name','account_number','iban','bank_verified']],
+  ['Exit',['exit_date','last_working_day','exit_type','payment_status','hold_reason','cleared_date']]
+];
+var EDITOR_LOCKED=['employee_id','report_name','report_surname','completeness_%','blocking_gaps','chase_gaps','created_at','created_by','updated_at','updated_by','insurance_wage'];
+
+function openEditor(row){
+  hide('hrHome'); show('hrEditor');
+  el('hrEditor').innerHTML='<p class="sub">Loading…</p>';
+  google.script.run.withSuccessHandler(renderEditor).withFailureHandler(function(e){el('hrEditor').innerHTML='<span style="color:#c62828">'+e.message+'</span>';}).hrGetRecord(row);
+}
+function renderEditor(rec){
+  CURRENT=rec;
+  var p=parseInt(rec['completeness_%'])||0;
+  var h='<div class="wrap" style="padding-top:16px"><span class="back" onclick="closeEditor()">&larr; back to console</span>';
+  h+='<div class="card"><h2>'+(rec.full_name_en||'Record')+' &middot; '+(rec.employee_id||'no ID')+'</h2>';
+  h+='<div class="prog"><i style="width:'+p+'%"></i></div><p class="sub">'+p+'% complete</p>';
+  if(rec.blocking_gaps&&rec.blocking_gaps.trim()) h+='<div class="gaps"><strong>Blocking payment:</strong> '+rec.blocking_gaps.trim().split(/\s+/).map(lbl).join(', ')+'</div>';
+  if(rec.chase_gaps&&rec.chase_gaps.trim()) h+='<div class="gaps chase"><strong>Also missing:</strong> '+rec.chase_gaps.trim().split(/\s+/).map(lbl).join(', ')+'</div>';
+  h+='<div id="editMsg" class="msg"></div></div>';
+  EDITOR_GROUPS.forEach(function(g){
+    h+='<div class="card"><h2>'+g[0]+'</h2><div class="grid">';
+    g[1].forEach(function(f){
+      if(EDITOR_LOCKED.indexOf(f)!==-1){
+        h+='<div class="f"><label>'+lbl(f)+'</label><input value="'+esc(rec[f])+'" readonly style="background:#f2f2f7;color:#888"></div>';
+      } else {
+        h+=field(f,rec[f],LISTOF[f]);
+      }
+    });
+    h+='</div></div>';
+  });
+  h+='<div class="bar" style="position:sticky;bottom:0;background:#fafaff;padding:12px 0"><button onclick="saveEditor()">Save all changes</button><button class="ghost" onclick="closeEditor()">Done</button></div></div>';
+  el('hrEditor').innerHTML=h;
+}
+function saveEditor(){
+  var data={}; el('hrEditor').querySelectorAll('[data-f]').forEach(function(i){data[i.dataset.f]=i.value;});
+  msg('editMsg','Saving…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('editMsg',res.count?res.count+' field(s) saved.':'Nothing changed.','ok');
+    google.script.run.withSuccessHandler(renderEditor).hrGetRecord(CURRENT._row); // refresh completeness
+  }).withFailureHandler(function(e){msg('editMsg',e.message,'err');}).hrSaveRecord(CURRENT._row,data);
+}
+function fillCostCentre(project){
+  var cc=PROJMAP[project];
+  if(cc===undefined) return;
+  var box=el('hrEditor').querySelector('[data-f="cost_centre"]');
+  if(box){ box.value=cc; }
+}
+function closeEditor(){ hide('hrEditor'); show('hrHome'); hrRefreshTab(); }
+
+function loadHR(){ show('hrHome'); hrTab('people'); }
+
+// ---------- HR console tabs ----------
+// Each pane loads only when opened. The console had grown to eighteen cards
+// and ten backend calls on every load; this makes it one group at a time.
+var HRTAB=null, HRLOADED={};
+function hrTab(which){
+  ['people','contracts','leave','exits','data'].forEach(function(k){
+    var p=el('hrpane_'+k), b=el('hrtab_'+k);
+    if(p) p.classList.add('hide');
+    if(b) b.className='ghost';
+  });
+  var pane=el('hrpane_'+which), btn=el('hrtab_'+which);
+  if(pane) pane.classList.remove('hide');
+  if(btn) btn.className='';
+  HRTAB=which;
+  if(HRLOADED[which]) return;
+  HRLOADED[which]=true;
+  if(which==='people'){
+    google.script.run.withSuccessHandler(renderTasks).withFailureHandler(fail).hrGetTaskList();
+    google.script.run.withSuccessHandler(renderIntake).withFailureHandler(fail).hrGetIntake();
+    google.script.run.withSuccessHandler(renderBank).withFailureHandler(fail).hrGetBankPending();
+    google.script.run.withSuccessHandler(renderHRList).withFailureHandler(fail).hrGetPending();
+  } else if(which==='contracts'){
+    ctFillTypes(); loadFileProgress(); sgLoad();
+  } else if(which==='leave'){
+    loadHRLeave();
+  } else if(which==='exits'){
+    loadClearance('HR'); loadNoShows(); loadTerminations(); lvbFillTypes();
+  } else if(which==='data'){
+    buFillFields(); loadMedicalOutstanding();
+    var sy=el('sikYear');
+    if(sy&&!sy.value){ var d=new Date(); sy.value=d.getFullYear();
+      el('sikMonth').value=String(d.getMonth()||12); }
+  }
+}
+function hrRefreshTab(){ if(HRTAB){ HRLOADED[HRTAB]=false; hrTab(HRTAB); } }
+
+// ---------- signing appointments ----------
+function sgLoad(){
+  google.script.run.withSuccessHandler(function(r){
+    if(!r.days.length){ el('sgList').innerHTML='<p class="sub">Nobody is booked in.</p>'; return; }
+    var h='';
+    if(r.overdue) h+='<div class="warnbox"><strong>'+r.overdue+' appointment(s) are in the past</strong> '+
+      'and have not been marked. Until you do, those people cannot book again.</div>';
+    r.days.forEach(function(d){
+      var tag = d.isToday? '<span class="pill verified">today</span>'
+              : d.isPast? '<span class="pill blocked">overdue</span>' : '';
+      h+='<p class="sub" style="margin:16px 0 6px"><strong>'+d.date+'</strong> — '+
+         d.people.length+' of '+r.per_day+' '+tag+'</p>';
+      d.people.forEach(function(p){
+        h+='<div class="qitem" style="align-items:flex-start;cursor:default"><div style="flex:1">'+
+           '<div class="nm">'+p.name+' &middot; '+p.employee_id+'</div>'+
+           '<div class="meta">'+(p.contract_type||'contract type not recorded')+' &middot; '+p.appointment_id+'</div>'+
+           (p.docs_outstanding!==''&&Number(p.docs_outstanding)>0
+              ? '<div class="meta" style="color:#8d6e00">'+p.docs_outstanding+' document(s) still missing — they can sign, but cannot take a copy away</div>'
+              : '<div class="meta" style="color:#2e7d32">File complete — they can take a copy</div>')+
+           '<input id="sgn'+p.row+'" placeholder="Note (optional)" style="width:100%;margin-top:8px;padding:6px;border:1px solid #e3e3ee;border-radius:5px">'+
+           '</div><div style="text-align:right;margin-left:12px;white-space:nowrap">'+
+           '<button class="ok" style="padding:7px 14px" onclick="sgMark('+p.row+',\'signed\')">Signed</button><br>'+
+           '<button class="ghost" style="margin-top:6px;padding:6px 12px" onclick="sgMark('+p.row+',\'noshow\')">Did not come</button>'+
+           '</div></div>';
+      });
+    });
+    el('sgList').innerHTML=h;
+  }).withFailureHandler(function(e){el('sgList').innerHTML='<p class="sub" style="color:#c62828">'+e.message+'</p>';})
+   .hrSigningAppointments();
+}
+function sgMark(row,outcome){
+  if(outcome==='signed' && !confirm('Record this as signed? It marks their contract signed on file and sends their medical enrolment.')) return;
+  if(outcome!=='signed' && !confirm('Record as did not come? They will be emailed and can book again — the slot they missed is not given back.')) return;
+  msg('sgMsg','Saving…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('sgMsg',res.msg,res.ok?'ok':'err'); sgLoad();
+  }).withFailureHandler(function(e){msg('sgMsg',e.message,'err');})
+   .hrMarkSigning(row,outcome,el('sgn'+row)?el('sgn'+row).value:'');
+}
+
+// ---------- who has not signed ----------
+var USROWS=[];
+function usLoad(){
+  el('usList').innerHTML='<p class="sub">Loading…</p>';
+  google.script.run.withSuccessHandler(function(r){
+    USROWS=r.rows||[];
+    el('usSummary').innerHTML='<strong>'+r.total+'</strong> without a signed contract &middot; '+
+      '<strong>'+r.booked+'</strong> already booked &middot; <strong>'+r.unbooked+'</strong> to bring in';
+    if(!USROWS.length){ el('usList').innerHTML='<p class="sub" style="color:#2e7d32">Everyone has signed.</p>'; hide('usBtn'); return; }
+    var h='';
+    USROWS.forEach(function(p,i){
+      if(p.booked){
+        h+='<div class="qitem" style="cursor:default;background:#f7f7ff"><div>'+
+           '<div class="nm">'+p.name+' &middot; '+p.employee_id+'</div>'+
+           '<div class="meta">'+(p.job_title||'')+(p.project?(' &middot; '+p.project):'')+'</div>'+
+           '</div><span class="pill verified">booked '+p.booked+'</span></div>';
+        return;
+      }
+      h+='<label class="qitem" style="cursor:pointer"><div style="display:flex;gap:10px;align-items:flex-start;flex:1">'+
+         '<input type="checkbox" class="uspick" value="'+p.employee_id+'" style="margin-top:3px">'+
+         '<div><div class="nm">'+p.name+' &middot; '+p.employee_id+'</div>'+
+         '<div class="meta">'+(p.job_title||'')+(p.project?(' &middot; '+p.project):'')+'</div>'+
+         '<div class="meta">Hired '+(p.hire_date||'—')+
+           (p.days_since_hire!==''? (' &middot; '+p.days_since_hire+' days ago'):'')+
+           ' &middot; '+p.contract_type+'</div></div></div>'+
+         '<span class="pill '+(p.days_since_hire>90?'blocked':'pending')+'">'+
+           (p.days_since_hire!==''? p.days_since_hire+'d':'—')+'</span></label>';
+    });
+    el('usList').innerHTML=h;
+    show('usBtn');
+  }).withFailureHandler(function(e){el('usList').innerHTML='<p class="sub" style="color:#c62828">'+e.message+'</p>';})
+   .hrUnsignedContracts();
+}
+function usTickAll(){
+  var boxes=document.querySelectorAll('.uspick');
+  for(var i=0;i<boxes.length;i++) boxes[i].checked = i<10;
+}
+function usInvite(){
+  var ids=Array.prototype.map.call(document.querySelectorAll('.uspick:checked'),function(c){return c.value;});
+  if(!ids.length){ msg('usMsg','Tick at least one person.','err'); return; }
+  if(!confirm('Book '+ids.length+' person(s) in? Each will be emailed with their day.')) return;
+  msg('usMsg','Booking…','warn'); el('usBtn').disabled=true;
+  google.script.run.withSuccessHandler(function(res){
+    el('usBtn').disabled=false;
+    msg('usMsg',res.msg,res.ok?'ok':'err');
+    if(res.ok){ usLoad(); sgLoad(); }
+  }).withFailureHandler(function(e){ el('usBtn').disabled=false; msg('usMsg',e.message,'err'); })
+   .hrInviteToSign(ids, el('usNote').value);
+}
+
+function renderBank(rows){
+  if(!rows.length){el('bankList').innerHTML='<p class="sub">No bank details awaiting verification.</p>';return}
+  var h='';rows.forEach(function(r){
+    h+='<div class="qitem" style="align-items:flex-start"><div>'+
+       '<div class="nm">'+(r.full_name_en||'(no name)')+' &middot; '+(r.employee_id||'')+'</div>'+
+       '<div class="ro" style="margin-top:10px;min-width:340px">'+
+         '<div class="row"><span class="k">Bank</span><span class="v">'+(r.bank_name||'—')+'</span></div>'+
+         '<div class="row"><span class="k">Account number</span><span class="v">'+(r.account_number||'—')+'</span></div>'+
+         '<div class="row"><span class="k">IBAN</span><span class="v">'+(r.iban||'—')+'</span></div>'+
+       '</div></div>'+
+       '<div style="text-align:right;white-space:nowrap">'+
+         '<span class="pill pending">'+r.bank_verified+'</span><br>'+
+         '<button class="ok" style="margin-top:8px;padding:7px 14px" onclick="verifyBank('+r.row+',\'verify\')">Verify</button><br>'+
+         '<button class="ghost" style="margin-top:6px;padding:6px 12px" onclick="verifyBank('+r.row+',\'reject\')">Reject</button>'+
+       '</div></div>';
+  });
+  el('bankList').innerHTML=h;
+}
+function verifyBank(row,decision){
+  var msg = decision==='reject'
+    ? 'Reject these bank details? The employee will need to resubmit.'
+    : 'Confirm these bank details match the ID document, then verify?';
+  if(!confirm(msg))return;
+  google.script.run.withSuccessHandler(function(res){
+    el('bankMsg').className='msg ok';
+    el('bankMsg').textContent = res.status==='Verified' ? 'Bank verified. Payment gate released.' : 'Bank details rejected.';
+    loadHR();
+  }).withFailureHandler(function(e){el('bankMsg').className='msg err';el('bankMsg').textContent=e.message;})
+   .hrVerifyBank(row,decision);
+}
+
+
+function renderTasks(rows){
+  if(!rows.length){el('taskList').innerHTML='<p class="sub" style="color:#2e7d32">Nothing needs your attention. Every record is complete on the HR side.</p>';return;}
+  var h='<p class="sub" style="font-weight:bold;color:#2800C8">'+rows.length+' record(s) need something from you</p>';
+  rows.forEach(function(r){
+    var cls = r.missingCount===0 ? 'verified' : (r.missingCount<=3?'pending':'blocked');
+    h+='<div class="qitem" onclick="openEditor('+r.row+')"><div>'+
+       '<div class="nm">'+(r.full_name_en||'(no name)')+' &middot; '+(r.employee_id||'no ID')+'</div>'+
+       '<div class="meta">'+r.reasons.join(' &middot; ')+'</div>'+
+       (r.missing && r.missing.length ? '<div class="meta" style="color:#8d6e00">'+r.missing.map(lbl).join(', ')+'</div>' : '')+
+       '</div>'+
+       '<span class="pill '+cls+'">'+(r.missingCount||0)+'</span></div>';
+  });
+  el('taskList').innerHTML=h;
+}
+
+function renderIntake(rows){
+  if(!rows.length){el('intakeList').innerHTML='<p class="sub">No new submissions.</p>';return}
+  var h='';rows.forEach(function(r){
+    var flagged=r.review_status.indexOf('REVIEW')===0;
+    var pill=flagged?'blocked':'verified';
+    h+='<div class="qitem"><div><div class="nm">'+(r.full_name_en||'(no name)')+'</div>'+
+       '<div class="meta">'+(r.intake_job_title||'')+' / '+(r.intake_account||'')+' &middot; '+r.national_id+'</div>'+
+       '<div class="meta">'+(r.id_check_note||'')+(r.dedup_flag?(' &middot; '+r.dedup_flag+' ('+r.previous_employee_id+')'):'')+'</div></div>'+
+       '<div style="text-align:right"><span class="pill '+pill+'">'+r.review_status.replace("REVIEW - ","")+'</span><br>'+
+       '<button class="ok" style="margin-top:8px;padding:7px 14px" onclick="approveIntake('+r._row+',\''+String(r.full_name_en).replace(/\x27/g,"")+'\')">Approve &amp; create</button>'+
+       '<button class="ghost" style="margin-top:8px;padding:7px 10px" onclick="rejectIntake('+r._row+')">Reject</button></div></div>';
+  });
+  el('intakeList').innerHTML=h;
+}
+function approveIntake(row,name){
+  if(!confirm('Confirm the national ID matches the physical card for '+name+', then create the record and issue the Employee ID?'))return;
+  google.script.run.withSuccessHandler(function(res){
+    if(res.ok){alert('Record created. Employee ID '+res.id+' issued. IT has been asked to create the Konecta email.');loadHR();}
+    else alert(res.msg);
+  }).withFailureHandler(function(e){alert(e.message)}).hrApproveIntake(row);
+}
+function rejectIntake(row){
+  var why=prompt('Reason for rejecting this submission?');if(why===null)return;
+  google.script.run.withSuccessHandler(function(){loadHR()}).hrRejectIntake(row,why);
+}
+function renderHRList(rows){
+  if(!rows.length){el('hrList').innerHTML='<p class="sub">No pending records. All caught up.</p>';return}
+  var h='';rows.forEach(function(r){
+    var st=r.record_status,pill=st==='Pending'?'pending':(st.indexOf('Blocked')>-1?'blocked':'verified');
+    h+='<div class="qitem" onclick="openHR('+r.row+')"><div><div class="nm">'+(r.full_name_en||'(no name)')+'</div>'+
+       '<div class="meta">'+(r.employee_id||'no ID yet')+' &middot; '+r.national_id+'</div></div>'+
+       '<span class="pill '+pill+'">'+st+'</span></div>';
+  });
+  el('hrList').innerHTML=h;window._hrRows=rows;
+}
+function openHR(row){
+  var r=window._hrRows.filter(function(x){return x.row===row})[0];CURRENT=r;
+  hide('hrHome');show('hrDetail');
+  var g1=NEW_IDENTITY.every(function(f){return r[f]});
+  var idIssued=!!r.employee_id;
+  var g2=GATE2.every(function(f){return r[f]});
+  var h='<span class="back" onclick="backHR()">&larr; back to list</span>';
+  if(r.record_status.indexOf('Blocked')>-1){
+    h+='<div class="warnbox"><strong>Possible rehire.</strong> This national ID matches a closed record ('+(r.previous_employee_id||'?')+'). No ID has been issued. Resolve before proceeding.</div>';
+  }
+  h+='<div class="card"><h2>'+(r.full_name_en||'New joiner')+'</h2>';
+  // GATES
+  h+='<div style="margin:10px 0">'+
+     gate('Gate 1 — identity submitted',g1)+
+     gate('ID card matched & ID issued',idIssued)+
+     gate('Gate 2 — offer complete',g2)+'</div>';
+  // identity block for card matching
+  h+='<h3>Verify against the physical ID card</h3><div class="ro">';
+  ['national_id','full_name_en','full_name_ar','personal_email','mobile'].forEach(function(f){
+    h+='<div class="row"><span class="k">'+lbl(f)+'</span><span class="v">'+(r[f]||'—')+'</span></div>'});
+  h+='</div>';
+  if(!idIssued){
+    h+='<div class="warnbox">Check the number above matches the physical card in the room, then issue the ID.</div>';
+    h+='<div class="bar"><button class="ok" onclick="issueId('+row+')" '+((!g1||r.record_status.indexOf("Blocked")>-1)?'disabled':'')+'>Verify &amp; Issue Employee ID</button></div>';
+  } else {
+    h+='<p class="sub" style="color:#2e7d32">Employee ID '+r.employee_id+' issued.</p>';
+  }
+  h+='</div>';
+  // OFFER form
+  h+='<div class="card"><h2>Offer details</h2><p class="sub">Gate 2 (marked *) lets payroll calculate. The rest are chased.</p><div id="hrDetMsg" class="msg"></div><div class="grid" id="hrOffer"></div><div class="bar"><button onclick="saveOffer('+row+')">Save offer details</button></div></div>';
+  el('hrDetail').innerHTML=h;
+  var o='';HR_FIELDS.forEach(function(f){var star=GATE2.indexOf(f)>-1?' *':'';
+    o+=field(f,r[f],LISTOF[f]).replace('</label>',star+'</label>')});
+  el('hrOffer').innerHTML=o;
+}
+function gate(t,on){return '<div class="gate"><div class="dot '+(on?'on':'off')+'"></div>'+t+'</div>'}
+function backHR(){hide('hrDetail');show('hrHome');hrRefreshTab()}
+function issueId(row){msg('hrDetMsg','','');if(!confirm('Confirm the national ID matches the physical card, then issue the employee ID?'))return;
+  google.script.run.withSuccessHandler(function(res){if(res.ok){alert('Employee ID '+res.id+' issued and emailed to the joiner.');backHR()}else alert(res.msg)})
+  .withFailureHandler(function(e){alert(e.message)}).hrVerifyAndIssue(row)}
+function saveOffer(row){msg('hrDetMsg','Saving…','warn');
+  google.script.run.withSuccessHandler(function(res){msg('hrDetMsg',(res.count+' field(s) saved.')+(res.active?' Record is now Active.':''),'ok')})
+  .withFailureHandler(function(e){msg('hrDetMsg',e.message,'err')}).hrSaveOffer(row,collect('hrOffer'))}
+
+// ================= IT =================
+function loadIT(){show('itHome'); loadClearance('IT');google.script.run.withSuccessHandler(renderIT).withFailureHandler(fail).itGetQueue()}
+function renderIT(rows){
+  if(!rows.length){el('itList').innerHTML='<p class="sub">No emails pending. All caught up.</p>';return}
+  var h='';rows.forEach(function(r){
+    h+='<div class="qitem"><div><div class="nm">'+r.full_name_en+'</div><div class="meta">'+r.employee_id+' &middot; '+r.personal_email+'</div></div>'+
+       '<div style="display:flex;gap:8px;align-items:center"><input id="it'+r.row+'" placeholder="name@konecta.com" style="padding:8px;border:1px solid #e3e3ee;border-radius:5px"><button onclick="setEmail('+r.row+')">Save</button></div></div>';
+  });
+  el('itList').innerHTML=h;
+}
+function setEmail(row){var v=el('it'+row).value.trim();if(!v){alert('Enter the email.');return}
+  google.script.run.withSuccessHandler(function(res){if(res.ok){msg('itMsg','Email saved.','ok');loadIT()}else msg('itMsg',res.msg,'err')})
+  .withFailureHandler(function(e){msg('itMsg',e.message,'err')}).itSetEmail(row,v)}
+
+// ===================== LEAVE TAB =====================
+var LEAVEINFO=null, LVPICKER=[];
+
+function loadLeave(){
+  google.script.run.withSuccessHandler(renderLeave).withFailureHandler(function(e){
+    el('leaveBal').innerHTML='<span style="color:#c62828">'+e.message+'</span>';
+  }).getMyLeaveInfo();
+}
+
+function renderLeave(info){
+  if(!info.found){ el('leaveBal').innerHTML='<p class="sub">No employee record linked to your account.</p>'; return; }
+  LEAVEINFO=info;
+
+  // balance
+  var used=info.annual_taken, ent=info.annual_entitlement, left=info.annual_remaining;
+  var pct = ent? Math.round(used/ent*100) : 0;
+  el('leaveBal').innerHTML=
+    '<div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:10px">'+
+      '<div><div style="font-size:26px;font-weight:bold;color:#2800C8">'+left+'</div><div class="sub" style="margin:0">days left</div></div>'+
+      '<div><div style="font-size:26px;font-weight:bold">'+used+'</div><div class="sub" style="margin:0">taken</div></div>'+
+      '<div><div style="font-size:26px;font-weight:bold">'+ent+'</div><div class="sub" style="margin:0">entitlement</div></div>'+
+    '</div>'+
+    '<div class="prog"><i style="width:'+pct+'%"></i></div>'+
+    '<p class="sub" style="margin-top:6px">Annual leave, '+(new Date().getFullYear())+
+      '. Your working week is <strong>'+(info.weekend_pattern||'Fri & Sat')+'</strong>.</p>';
+
+  // types
+  var o='<option value=""></option>';
+  info.types.forEach(function(t){ o+='<option value="'+t.type+'">'+t.type+'</option>'; });
+  el('lvType').innerHTML=o;
+
+  // managers (editable, so wrong ones get corrected)
+  el('lvManagers').innerHTML='';
+
+  renderLeaveHistory(info.requests);
+}
+
+function lvTypeChanged(){
+  var t=(LEAVEINFO.types||[]).filter(function(x){return x.type===el('lvType').value;})[0];
+  var n='';
+  if(t){
+    if(t.track==='Entitled'){
+      n='This is a legal entitlement — it goes to HR, not your manager.'+
+        (t.document? ' Please email your <strong>'+t.document.toLowerCase()+'</strong> to HR.' : '');
+    } else {
+      n='Goes to your manager for approval.'+(t.notice? ' Needs '+t.notice+' working days notice.' : '');
+    }
+    if(t.entitlement) n+='<br>Entitlement: '+t.entitlement+'.';
+  }
+  el('lvTypeNote').innerHTML=n;
+  // managers block only matters for discretionary leave
+  if(t && t.track==='Discretionary'){
+    el('lvManagers').innerHTML=
+      '<p class="sub" style="margin:14px 0 6px"><strong>Who approves this?</strong> Correct these if they are wrong — HR will confirm and update your record.</p>'+
+      '<div class="grid">'+
+        field('direct_manager', LEAVEINFO.direct_manager, '__manager__')+
+        field('dotted_manager', LEAVEINFO.dotted_manager, '__manager__')+
+      '</div>';
+  } else {
+    el('lvManagers').innerHTML='';
+  }
+  lvDatesChanged();
+}
+
+function lvDatesChanged(){
+  var s=el('lvStart').value, e=el('lvEnd').value;
+  el('lvPicker').innerHTML=''; el('lvCount').innerHTML='';
+  if(!s||!e) return;
+  var rotational = (LEAVEINFO.weekend_pattern==='Rotational');
+  if(rotational){
+    google.script.run.withSuccessHandler(function(days){
+      LVPICKER=days;
+      var h='<p class="sub" style="margin:14px 0 6px"><strong>Which of these days were you scheduled to work?</strong> Untick your days off.</p><div style="display:flex;gap:8px;flex-wrap:wrap">';
+      days.forEach(function(d){
+        if(d.holiday){
+          h+='<label style="padding:8px 12px;border:1px solid #e3e3ee;border-radius:6px;background:#f2f2f7;color:#999;font-size:13px">'+d.label+' — holiday</label>';
+        } else {
+          h+='<label style="padding:8px 12px;border:1px solid #e3e3ee;border-radius:6px;font-size:13px;cursor:pointer">'+
+             '<input type="checkbox" class="lvday" value="'+d.date+'" checked onchange="lvRecount()"> '+d.label+'</label>';
+        }
+      });
+      el('lvPicker').innerHTML=h+'</div>';
+      lvRecount();
+    }).getDayPicker(s,e);
+  } else {
+    google.script.run.withSuccessHandler(function(res){
+      if(res.error){ el('lvCount').innerHTML='<span style="color:#c62828">'+res.error+'</span>'; return; }
+      var msg='<strong>'+res.days+' working day(s)</strong> will be counted.';
+      if(res.skipped && res.skipped.length) msg+='<br>Not counted: '+res.skipped.join(', ');
+      el('lvCount').innerHTML=msg;
+    }).countLeaveDays(s,e,LEAVEINFO.weekend_pattern,null);
+  }
+}
+
+function lvRecount(){
+  var n=document.querySelectorAll('.lvday:checked').length;
+  el('lvCount').innerHTML='<strong>'+n+' working day(s)</strong> will be counted.';
+}
+
+function submitLeave(){
+  var payload={
+    leave_type: el('lvType').value,
+    start_date: el('lvStart').value,
+    end_date:   el('lvEnd').value,
+    reason:     el('lvReason').value
+  };
+  if(!payload.leave_type){ msg('lvMsg','Please choose a leave type.','err'); return; }
+  if(!payload.start_date||!payload.end_date){ msg('lvMsg','Please choose both dates.','err'); return; }
+  var dm=el('lvManagers').querySelector('[data-f="direct_manager"]');
+  var dt=el('lvManagers').querySelector('[data-f="dotted_manager"]');
+  if(dm) payload.direct_manager=dm.value;
+  if(dt) payload.dotted_manager=dt.value;
+  if(LEAVEINFO.weekend_pattern==='Rotational'){
+    payload.worked_days=Array.prototype.map.call(document.querySelectorAll('.lvday:checked'),function(c){return c.value;});
+  }
+  el('lvBtn').disabled=true; msg('lvMsg','Submitting…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    el('lvBtn').disabled=false;
+    msg('lvMsg',res.msg,res.ok?'ok':'err');
+    if(res.ok){ el('lvReason').value=''; el('lvPicker').innerHTML=''; el('lvCount').innerHTML=''; loadLeave(); }
+  }).withFailureHandler(function(e){ el('lvBtn').disabled=false; msg('lvMsg',e.message,'err'); })
+   .submitLeaveRequest(payload);
+}
+
+function renderLeaveHistory(rows){
+  if(!rows||!rows.length){ el('lvHistory').innerHTML='<p class="sub">No requests yet this year.</p>'; return; }
+  var h='';
+  rows.forEach(function(r){
+    var st=r.final_status||'Pending';
+    var cls = st.indexOf('Approved')===0||st==='Auto-approved' ? 'verified' : (st==='Rejected'?'blocked':'pending');
+    h+='<div class="qitem"><div>'+
+       '<div class="nm">'+r.leave_type+' &middot; '+(r.days_approved||r.days_requested)+' day(s)</div>'+
+       '<div class="meta">'+r.start_date+' to '+r.end_date+' &middot; '+r.request_id+'</div>'+
+       (r.reason?('<div class="meta">'+r.reason+'</div>'):'')+
+       '</div><span class="pill '+cls+'">'+st+'</span></div>';
+  });
+  el('lvHistory').innerHTML=h;
+}
+
+// ===================== LEAVE APPROVALS (manager) =====================
+function loadApprovals(){
+  google.script.run.withSuccessHandler(renderApprovals).withFailureHandler(function(e){
+    el('apprList').innerHTML='<p class="sub">'+e.message+'</p>';
+  }).getLeaveApprovals();
+}
+function renderApprovals(res){
+  if(!res.isApprover||!res.items.length){
+    el('apprList').innerHTML='<p class="sub">Nothing waiting on you.</p>'; return;
+  }
+  var h='';
+  res.items.forEach(function(r){
+    var days=r.days_list||[];
+    var boxes='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">';
+    days.forEach(function(d){
+      var dt=new Date(d);
+      var nm=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()];
+      boxes+='<label style="padding:8px 12px;border:1px solid #e3e3ee;border-radius:6px;font-size:13px;cursor:pointer">'+
+             '<input type="checkbox" class="dy'+r.row+'" value="'+d+'" checked onchange="recount('+r.row+')"> '+
+             nm+' '+d.slice(8,10)+'/'+d.slice(5,7)+'</label>';
+    });
+    boxes+='</div>';
+    h+='<div class="qitem" style="align-items:flex-start;cursor:default"><div style="flex:1">'+
+       '<div class="nm">'+r.employee_name+' &middot; '+r.leave_type+'</div>'+
+       '<div class="meta">'+r.start_date+' to '+r.end_date+' &middot; '+r.days_requested+' day(s) requested &middot; '+r.request_id+'</div>'+
+       (r.reason?('<div class="meta">Reason: '+r.reason+'</div>'):'')+
+       (r.role==='dotted'?('<div class="meta" style="color:#8d6e00">Direct manager approved these '+r.direct_days+' day(s). You can approve fewer, not more.</div>'):'')+
+       (r.on_behalf?('<div class="meta" style="color:#8d6e00">You are acting on behalf of '+r.acting_as+'.</div>'):'')+
+       '<p class="sub" style="margin:12px 0 0"><strong>Untick any day you cannot approve.</strong></p>'+
+       boxes+
+       '<div id="cnt'+r.row+'" class="sub" style="margin-top:8px"><strong>'+days.length+'</strong> day(s) will be approved.</div>'+
+       '<input id="ac'+r.row+'" placeholder="Comment (optional)" style="width:100%;margin-top:8px;padding:6px;border:1px solid #e3e3ee;border-radius:5px">'+
+       '</div>'+
+       '<div style="text-align:right;white-space:nowrap;margin-left:12px">'+
+         '<button class="ok" style="padding:7px 14px" onclick="decide('+r.row+',\'approve\')">Approve ticked</button><br>'+
+         '<button class="ghost" style="margin-top:6px;padding:6px 12px" onclick="decide('+r.row+',\'reject\')">Reject all</button>'+
+       '</div></div>';
+  });
+  el('apprList').innerHTML=h;
+}
+function recount(row){
+  var n=document.querySelectorAll('.dy'+row+':checked').length;
+  el('cnt'+row).innerHTML='<strong>'+n+'</strong> day(s) will be approved.';
+}
+function decide(row,what){
+  var kept=Array.prototype.map.call(document.querySelectorAll('.dy'+row+':checked'),function(c){return c.value;});
+  var c=el('ac'+row)?el('ac'+row).value:'';
+  if(what==='approve' && !kept.length){ msg('apprMsg','Tick at least one day, or use Reject all.','err'); return; }
+  if(what==='reject' && !confirm('Reject this request entirely?')) return;
+  msg('apprMsg','Saving…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('apprMsg','Recorded — '+(res.final==='Pending'?'now with the dotted manager.':res.final.toLowerCase()+'.'),'ok');
+    loadApprovals();
+  }).withFailureHandler(function(e){msg('apprMsg',e.message,'err');}).decideLeave(row,what,kept.length,c,kept);
+}
+
+// ===================== LEAVE VALIDATION (HR) =====================
+function loadHRLeave(){
+  google.script.run.withSuccessHandler(renderHRLeave).withFailureHandler(function(e){
+    el('hrLeaveList').innerHTML='<p class="sub">'+e.message+'</p>';
+  }).hrGetLeaveToValidate();
+}
+function renderHRLeave(rows){
+  if(!rows||!rows.length){ el('hrLeaveList').innerHTML='<p class="sub">Nothing awaiting validation.</p>'; return; }
+  var h='';
+  rows.forEach(function(r){
+    h+='<div class="qitem" style="align-items:flex-start;cursor:default"><div style="flex:1">'+
+       '<div class="nm">'+r.employee_name+' &middot; '+r.leave_type+'</div>'+
+       '<div class="meta">'+r.start_date+' to '+r.end_date+' &middot; '+r.days_requested+' day(s) &middot; '+r.request_id+'</div>'+
+       (r.document_needed?('<div class="meta" style="color:#8d6e00">Document required: '+r.document_needed+'</div>'):'')+
+       (r.reason?('<div class="meta">Reason: '+r.reason+'</div>'):'')+
+       '<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">'+
+         '<label style="font-size:12px;color:#6b6b80">Days to validate</label>'+
+         '<input type="number" id="hv'+r.row+'" value="'+r.days_requested+'" min="0" max="'+r.days_requested+'" style="width:70px;padding:6px;border:1px solid #e3e3ee;border-radius:5px">'+
+         '<input id="hc'+r.row+'" placeholder="Note (optional)" style="flex:1;min-width:160px;padding:6px;border:1px solid #e3e3ee;border-radius:5px">'+
+       '</div></div>'+
+       '<div style="text-align:right;white-space:nowrap;margin-left:12px">'+
+         '<button class="ok" style="padding:7px 14px" onclick="hrLeave('+r.row+',\'approve\')">Document received — validate</button><br>'+
+         '<button class="ghost" style="margin-top:6px;padding:6px 12px" onclick="hrLeave('+r.row+',\'reject\')">Reject</button>'+
+       '</div></div>';
+  });
+  el('hrLeaveList').innerHTML=h;
+}
+function hrLeave(row,what){
+  var d=el('hv'+row)?el('hv'+row).value:null;
+  var c=el('hc'+row)?el('hc'+row).value:'';
+  if(what==='reject' && !confirm('Reject this request? The employee will be notified.')) return;
+  msg('hrLeaveMsg','Saving…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('hrLeaveMsg','Recorded — '+res.final.toLowerCase()+'.','ok'); loadHRLeave();
+  }).withFailureHandler(function(e){msg('hrLeaveMsg',e.message,'err');}).hrValidateLeave(row,what,d,c);
+}
+
+// ---------- file leave on behalf of a team member ----------
+var OBWHO=null;
+
+function obLookup(){
+  var id=el('obId').value.trim();
+  if(!id){ el('obWho').innerHTML=''; return; }
+  google.script.run.withSuccessHandler(function(r){
+    OBWHO=r;
+    if(!r.found){
+      el('obWho').innerHTML='<span style="color:#c62828">'+(r.msg||'Not found')+'</span>';
+      el('obType').innerHTML='<option value=""></option>';
+      return;
+    }
+    el('obWho').innerHTML='<strong>'+r.name+'</strong><br>'+
+      r.annual_remaining+' day(s) annual left &middot; week off: '+r.weekend_pattern;
+    var o='<option value=""></option>';
+    (r.types||[]).forEach(function(t){ o+='<option value="'+t.type+'">'+t.type+'</option>'; });
+    el('obType').innerHTML=o;
+  }).withFailureHandler(function(e){
+    el('obWho').innerHTML='<span style="color:#c62828">'+e.message+'</span>';
+  }).lookupEmployeeForLeave(id);
+}
+
+function obTypeChanged(){
+  if(!OBWHO||!OBWHO.found){ el('obTypeNote').innerHTML=''; return; }
+  var t=(OBWHO.types||[]).filter(function(x){return x.type===el('obType').value;})[0];
+  var n='';
+  if(t){
+    if(t.track==='Entitled'){
+      n='Goes to HR, not to you.'+(t.document? ' They will need to send their '+t.document.toLowerCase()+'.' : '')+
+        '<br>Can be backdated.';
+    } else {
+      n='<strong>Filing this counts as your approval</strong> and is recorded in your name.'+
+        (t.notice? ' Cannot be backdated.' : '');
+    }
+  }
+  el('obTypeNote').innerHTML=n;
+  obDatesChanged();
+}
+
+function obDatesChanged(){
+  var s=el('obStart').value, e=el('obEnd').value;
+  el('obPicker').innerHTML=''; el('obCount').innerHTML='';
+  if(!s||!e||!OBWHO||!OBWHO.found) return;
+  if(OBWHO.weekend_pattern==='Rotational'){
+    google.script.run.withSuccessHandler(function(days){
+      var h='<p class="sub" style="margin:14px 0 6px"><strong>Which of these days were they scheduled to work?</strong> Untick their days off.</p><div style="display:flex;gap:8px;flex-wrap:wrap">';
+      days.forEach(function(d){
+        if(d.holiday){
+          h+='<label style="padding:8px 12px;border:1px solid #e3e3ee;border-radius:6px;background:#f2f2f7;color:#999;font-size:13px">'+d.label+' — holiday</label>';
+        } else {
+          h+='<label style="padding:8px 12px;border:1px solid #e3e3ee;border-radius:6px;font-size:13px;cursor:pointer">'+
+             '<input type="checkbox" class="obday" value="'+d.date+'" checked onchange="obRecount()"> '+d.label+'</label>';
+        }
+      });
+      el('obPicker').innerHTML=h+'</div>';
+      obRecount();
+    }).getDayPicker(s,e);
+  } else {
+    google.script.run.withSuccessHandler(function(res){
+      if(res.error){ el('obCount').innerHTML='<span style="color:#c62828">'+res.error+'</span>'; return; }
+      var m='<strong>'+res.days+' working day(s)</strong> will be counted.';
+      if(res.skipped && res.skipped.length) m+='<br>Not counted: '+res.skipped.join(', ');
+      el('obCount').innerHTML=m;
+    }).countLeaveDays(s,e,OBWHO.weekend_pattern,null);
+  }
+}
+
+function obRecount(){
+  var n=document.querySelectorAll('.obday:checked').length;
+  el('obCount').innerHTML='<strong>'+n+' working day(s)</strong> will be counted.';
+}
+
+function obSubmit(){
+  var p={employee_id:el('obId').value.trim(), leave_type:el('obType').value,
+         start_date:el('obStart').value, end_date:el('obEnd').value,
+         reason:el('obReason').value};
+  if(!p.employee_id){ msg('obMsg','Enter the employee ID.','err'); return; }
+  if(!p.leave_type){ msg('obMsg','Choose a leave type.','err'); return; }
+  if(!p.start_date||!p.end_date){ msg('obMsg','Choose both dates.','err'); return; }
+  if(OBWHO && OBWHO.weekend_pattern==='Rotational'){
+    p.worked_days=Array.prototype.map.call(document.querySelectorAll('.obday:checked'),function(c){return c.value;});
+  }
+  if(!confirm('File this leave for '+((OBWHO&&OBWHO.name)||p.employee_id)+'? They will be emailed to confirm.')) return;
+  el('obBtn').disabled=true; msg('obMsg','Filing…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    el('obBtn').disabled=false;
+    msg('obMsg',res.msg,res.ok?'ok':'err');
+    if(res.ok){
+      el('obId').value=''; el('obReason').value=''; el('obWho').innerHTML='';
+      el('obPicker').innerHTML=''; el('obCount').innerHTML=''; el('obTypeNote').innerHTML='';
+      el('obType').innerHTML='<option value=""></option>';
+      loadApprovals();
+    }
+  }).withFailureHandler(function(e){ el('obBtn').disabled=false; msg('obMsg',e.message,'err'); })
+   .submitLeaveRequestFor(p);
+}
+
+// ---------- delegation ----------
+function loadDelegates(){
+  google.script.run.withSuccessHandler(renderDelegates).withFailureHandler(function(e){
+    el('delCurrent').innerHTML='<p class="sub">'+e.message+'</p>';
+  }).getDelegateOptions();
+}
+function renderDelegates(d){
+  if(!d||!d.canDelegate){ el('delCurrent').innerHTML='<p class="sub">Only managers can delegate.</p>'; return; }
+  var o='<option value=""></option>';
+  var grp=function(t,arr){ if(!arr||!arr.length) return '';
+    var g='<optgroup label="'+t+'">';
+    arr.forEach(function(m){ g+='<option value="'+m.email+'">'+m.label+'</option>'; });
+    return g+'</optgroup>'; };
+  o+=grp('My team', d.team); o+=grp('Other colleagues', d.others);
+  el('delWho').innerHTML=o;
+  var cur=(d.current||[]).filter(function(x){return String(x.active).toLowerCase()==='yes';});
+  if(!cur.length){ el('delCurrent').innerHTML='<p class="sub">No one is currently approving on your behalf.</p>'; return; }
+  var h='';
+  cur.forEach(function(c){
+    var w = (c.from_date||c.to_date) ? ((c.from_date||'now')+' to '+(c.to_date||'further notice')) : 'until you end it';
+    h+='<div class="qitem" style="cursor:default"><div>'+
+       '<div class="nm">'+c.delegate_email+'</div>'+
+       '<div class="meta">'+w+(c.note?(' &middot; '+c.note):'')+'</div></div>'+
+       '<button class="ghost" style="padding:6px 12px" onclick="endDel('+c.row+')">End</button></div>';
+  });
+  el('delCurrent').innerHTML=h;
+}
+function saveDelegate(){
+  var who=el('delWho').value;
+  if(!who){ msg('delMsg','Choose who should approve for you.','err'); return; }
+  msg('delMsg','Saving…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('delMsg',res.msg,res.ok?'ok':'err'); if(res.ok) loadDelegates();
+  }).withFailureHandler(function(e){msg('delMsg',e.message,'err');})
+   .setDelegate(who, el('delFrom').value, el('delTo').value, el('delNote').value);
+}
+function endDel(row){
+  if(!confirm('End this delegation?')) return;
+  google.script.run.withSuccessHandler(function(){ msg('delMsg','Delegation ended.','ok'); loadDelegates(); })
+   .withFailureHandler(function(e){msg('delMsg',e.message,'err');}).endDelegate(row);
+}
+
+// ---------- employee: My Contract ----------
+
+// ---------- my payslip ----------
+var PSLIP_PERIODS = null;
+
+function loadMyPayslip(period){
+  el('payslipBody').innerHTML='<div class="card"><p class="sub">Loading…</p></div>';
+  if(PSLIP_PERIODS){ fetchPayslip(period||PSLIP_PERIODS[0]); return; }
+  google.script.run.withSuccessHandler(function(list){
+    PSLIP_PERIODS = list||[];
+    if(!PSLIP_PERIODS.length){
+      el('payslipBody').innerHTML='<div class="card"><h2>My payslip</h2>'+
+        '<p class="sub">No payslip has been published yet. They appear here once payroll closes for the month.</p></div>';
+      return;
+    }
+    fetchPayslip(period||PSLIP_PERIODS[0]);
+  }).withFailureHandler(function(e){
+    el('payslipBody').innerHTML='<div class="card"><p class="sub" style="color:#c62828">'+e.message+'</p></div>';
+  }).listPayslipPeriods();
+}
+
+function fetchPayslip(period){
+  google.script.run.withSuccessHandler(function(d){ renderPayslip(d, period); })
+    .withFailureHandler(function(e){
+      el('payslipBody').innerHTML='<div class="card"><h2>My payslip</h2>'+
+        periodPicker(period)+
+        '<p class="sub" style="color:#c62828;margin-top:10px">'+e.message+'</p></div>';
+    }).getMyPayslip(period);
+}
+
+function downloadPayslip(period){
+  google.script.run
+    .withSuccessHandler(function(url){ if(url) window.open(url,'_blank'); })
+    .withFailureHandler(function(e){ alert(e.message); })
+    .makePayslipPdf(period);
+}
+
+function periodPicker(current){
+  if(!PSLIP_PERIODS || PSLIP_PERIODS.length<2) return '';
+  var h='<div class="f" style="max-width:220px;margin-bottom:6px"><label>Month</label><select onchange="loadMyPayslip(this.value)">';
+  PSLIP_PERIODS.forEach(function(p){
+    h+='<option value="'+p+'"'+(p===current?' selected':'')+'>'+prettyPeriod(p)+'</option>';
+  });
+  return h+'</select></div>';
+}
+
+function prettyPeriod(p){
+  var M=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var a=String(p).split('_');
+  return (M[Number(a[1])-1]||a[1])+' '+a[0];
+}
+
+function psMoney(v){
+  if(v===null||v===undefined||isNaN(v)) return '—';
+  return Number(v).toLocaleString('en-EG',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function renderPayslip(d, period){
+  if(d.non_employee){
+    el('payslipBody').innerHTML='<div class="card"><h2>My payslip</h2>'+
+      '<p class="sub">You are engaged through <strong>'+(d.company_type||'a third party')+'</strong>, '+
+      'so your pay is issued by them rather than by Konecta.</p>'+
+      '<div class="warnbox">For anything to do with your salary or payslip, please speak to your own employer directly.</div></div>';
+    return;
+  }
+  var h='<div class="card"><h2>My payslip</h2>'+periodPicker(period)+
+    '<p class="sub">'+prettyPeriod(period)+' &middot; '+(d.workingDays||0)+' working days</p>'+
+    '<div class="ro">'+
+    '<div class="row"><span class="k">Name</span><span class="v">'+(d.name||'—')+'</span></div>'+
+    '<div class="row"><span class="k">Employee ID</span><span class="v">'+(d.employeeId||'—')+'</span></div>'+
+    '<div class="row"><span class="k">Job title</span><span class="v">'+(d.jobTitle||'—')+'</span></div>'+
+    '</div></div>';
+
+  h+='<div class="card"><h2>What you earned</h2><div class="ro">';
+  (d.earnings||[]).forEach(function(e){
+    h+='<div class="row"><span class="k">'+e.label+
+       (e.note?'<br><span style="font-size:11px;color:#6b6b80;font-weight:normal">'+e.note+'</span>':'')+
+       '</span><span class="v">'+psMoney(e.amount)+'</span></div>';
+  });
+  h+='<div class="row" style="border-top:2px solid #2800C8;margin-top:4px;padding-top:8px">'+
+     '<span class="k" style="font-weight:bold;color:#2800C8">Total</span>'+
+     '<span class="v" style="font-weight:bold;color:#2800C8">'+psMoney(d.totalSalary)+'</span></div></div></div>';
+
+  h+='<div class="card"><h2>What was deducted</h2><div class="ro">';
+  (d.deductions||[]).forEach(function(x){
+    h+='<div class="row"><span class="k">'+x.label+
+       (x.note?'<br><span style="font-size:11px;color:#6b6b80;font-weight:normal">'+x.note+'</span>':'')+
+       '</span><span class="v">'+psMoney(x.amount)+'</span></div>';
+  });
+  h+='<div class="row" style="border-top:2px solid #2800C8;margin-top:4px;padding-top:8px">'+
+     '<span class="k" style="font-weight:bold;color:#2800C8">Total</span>'+
+     '<span class="v" style="font-weight:bold;color:#2800C8">'+psMoney(d.totalDeducted)+'</span></div></div></div>';
+
+  h+='<div class="card" style="background:var(--lilac);border-color:#2800C8">'+
+     '<div class="row" style="border:0;padding:4px 0">'+
+     '<span class="k" style="font-size:15px;font-weight:bold;color:#2800C8">Paid to you</span>'+
+     '<span class="v" style="font-size:20px;font-weight:bold;color:#2800C8">'+psMoney(d.netSalary)+' EGP</span></div>'+
+     '<p class="sub" style="margin-top:8px">'+(d.bankName||'')+
+     (d.accountMasked?(' &middot; '+d.accountMasked):'')+'</p></div>';
+
+  h+='<div class="card"><div class="bar" style="margin-top:0">'+
+     '<button class="ghost" onclick="downloadPayslip(\''+period+'\')">Download as PDF</button>'+
+     '</div><p class="sub" style="margin-top:10px">'+
+     'If something here does not look right, tell the People team before raising it elsewhere — '+
+     'most queries turn out to be a missing record we can correct the same day.</p></div>';
+
+  el('payslipBody').innerHTML=h;
+}
+
+function loadMyContract(){
+  el('contractBody').innerHTML='<div class="card"><p class="sub">Loading…</p></div>';
+  google.script.run.withSuccessHandler(renderMyContract).withFailureHandler(function(e){
+    el('contractBody').innerHTML='<div class="card"><p class="sub" style="color:#c62828">'+e.message+'</p></div>';
+  }).getMyContract();
+}
+function renderMyContract(d){
+  if(!d.found){ el('contractBody').innerHTML='<div class="card"><p class="sub">No employee record linked to your account.</p></div>'; return; }
+  var h='<div class="card"><h2>My contract</h2><div id="mcMsg" class="msg"></div><div class="ro">'+
+    '<div class="row"><span class="k">Job title</span><span class="v">'+(d.job_title||'—')+'</span></div>'+
+    '<div class="row"><span class="k">Contract type</span><span class="v">'+(d.contract_type||'—')+'</span></div>'+
+    '<div class="row"><span class="k">Start date</span><span class="v">'+(d.hire_date||'—')+'</span></div>'+
+    (d.contract_end_date?'<div class="row"><span class="k">End date</span><span class="v">'+d.contract_end_date+'</span></div>':'')+
+    '<div class="row"><span class="k">Signed</span><span class="v">'+
+      (d.contract_signed==='Yes'? 'Yes' : 'Not yet')+'</span></div></div>';
+if(d.non_employee){
+    el('contractBody').innerHTML='<div class="card"><h2>My contract</h2>'+
+      '<p class="sub">You are engaged through <strong>'+(d.company_type||'a third party')+'</strong>, '+
+      'so your employment contract is held by them rather than by Konecta.</p>'+
+      '<div class="warnbox">For anything to do with your contract, salary, or employment documents, '+
+      'please speak to your own employer directly. The Konecta People team cannot issue or change these for you.</div>'+
+      '<p class="sub">If you think this is wrong and you should be employed directly by Konecta, contact the People team.</p>'+
+      '</div>';
+    return;
+  }
+  // reading copy
+  if(d.contract){
+    h+='<p class="sub" style="margin:14px 0 6px">You can read your contract before you sign it.</p>'+
+       '<div class="bar" style="margin-top:0">'+
+       '<a href="https://docs.google.com/document/d/'+d.contract.id+'/preview" target="_blank" rel="noopener">'+
+       '<button class="ghost">Read my contract</button></a></div>';
+  } else {
+    h+='<div class="warnbox" style="margin-top:14px">Your contract has not been prepared yet. '+
+       'Book a signing appointment and the People team will have it ready for you.</div>';
+  }
+  h+='</div>';
+
+  // documents
+  h+='<div class="card"><h2>My documents</h2>'+
+     '<p class="sub">You can sign your contract at any time. To take a <strong>copy away with you</strong>, '+
+     'your file needs to be complete — these are the documents we hold for you.</p>';
+  if(d.documents.length){
+    var done=d.documents.filter(function(x){return x.status==='Received';}).length;
+    var pct=Math.round(done/d.documents.length*100);
+    h+='<div class="prog"><i style="width:'+pct+'%"></i></div>'+
+       '<p class="sub">'+done+' of '+d.documents.length+' on file</p>'+
+       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">';
+    d.documents.forEach(function(x){
+      var ok=x.status==='Received';
+      h+='<div style="padding:8px;border:1px solid '+(ok?'#a5d6a7':'#e3e3ee')+
+         ';background:'+(ok?'#f4fbf4':'#fff')+';border-radius:6px;font-size:13px">'+
+         (ok? '&#10003; ' : '&#9675; ')+x.no+'. '+x.name+
+         (x.optional? ' <span style="color:#8d6e00;font-size:11px">(only if it applies)</span>':'')+
+         '</div>';
+    });
+    h+='</div>';
+  }
+  if(d.can_get_copy){
+    h+='<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:12px;margin-top:14px;font-size:13px;color:#2e7d32">'+
+       '<strong>Your file is complete.</strong> You can take a signed copy away with you.</div>';
+  } else {
+    h+='<div class="warnbox" style="margin-top:14px"><strong>'+d.docs_outstanding+' document(s) still needed.</strong><br>'+
+       'You can still sign — but we cannot give you a copy until your file is complete. '+
+       'Bring what is missing with you, or email it to the People team.</div>';
+  }
+  h+='</div>';
+
+  // appointment
+  h+='<div class="card"><h2>Signing appointment</h2>';
+  if(d.contract_signed==='Yes' && !d.appointment){
+    h+='<p class="sub" style="color:#2e7d32">Your contract is signed. Nothing further is needed.</p>';
+  } else if(d.appointment){
+    var pretty=d.appointment.date;
+    h+='<div class="ro"><div class="row"><span class="k">Your appointment</span>'+
+       '<span class="v">'+pretty+'</span></div>'+
+       '<div class="row"><span class="k">Reference</span><span class="v">'+d.appointment.id+'</span></div></div>'+
+       '<p class="sub" style="margin-top:12px">Come to the People team during the working day and bring your national ID.</p>'+
+       '<div class="warnbox">If you cannot make it, cancel so someone else can take the slot. '+
+       'If you simply do not come, the appointment is used up and your next date will be considerably later.</div>'+
+       '<div class="bar"><button class="ghost" onclick="mcCancel()">Cancel my appointment</button></div>';
+  } else {
+    h+='<p class="sub">Signing appointments are '+d.per_day+' a day, Sunday to Thursday. '+
+       'You will be given the next day with room.</p>';
+    if(d.next_available){
+      h+='<div class="ro"><div class="row"><span class="k">Next available</span>'+
+         '<span class="v">'+d.next_available+'</span></div></div>';
+    }
+    h+='<div class="bar"><button id="mcBtn" onclick="mcBook()">Book my signing appointment</button></div>';
+  }
+  h+='</div>';
+  el('contractBody').innerHTML=h;
+}
+function mcBook(){
+  if(!confirm('Book your contract signing appointment?')) return;
+  el('mcBtn').disabled=true;
+  google.script.run.withSuccessHandler(function(res){
+    if(res.ok){ loadMyContract(); }
+    else { el('mcBtn').disabled=false; msg('mcMsg',res.msg,'err'); }
+  }).withFailureHandler(function(e){ el('mcBtn').disabled=false; msg('mcMsg',e.message,'err'); })
+   .requestSigningAppointment();
+}
+function mcCancel(){
+  if(!confirm('Cancel your appointment? You can book again whenever you are ready.')) return;
+  google.script.run.withSuccessHandler(function(res){
+    msg('mcMsg',res.msg,res.ok?'ok':'err');
+    if(res.ok) loadMyContract();
+  }).withFailureHandler(function(e){msg('mcMsg',e.message,'err');})
+   .cancelSigningAppointment();
+}
+
+// ---------- employee: balance query ----------
+function toggleBalIssue(){ el('balIssueBox').classList.toggle('hide'); }
+function sendBalIssue(){
+  var t=el('balIssueText').value.trim();
+  if(!t){ msg('balIssueMsg','Please describe what looks wrong.','err'); return; }
+  msg('balIssueMsg','Sending…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('balIssueMsg',res.msg,res.ok?'ok':'err');
+    if(res.ok) el('balIssueText').value='';
+  }).withFailureHandler(function(e){msg('balIssueMsg',e.message,'err');}).reportBalanceIssue(t);
+}
+
+// ---------- SIK monthly report ----------
+function runSikCheck(){
+  var y=el('sikYear').value.trim(), m=el('sikMonth').value;
+  if(!y){ msg('sikMsg','Enter the year.','err'); return; }
+  msg('sikMsg','Checking…','warn'); el('sikOut').innerHTML=''; hide('sikBuild');
+  google.script.run.withSuccessHandler(function(r){
+    msg('sikMsg',r.msg, r.ok? (r.ready?'ok':'warn') : 'err');
+    if(!r.ok) return;
+    var h='';
+    if(r.absentCols && r.absentCols.length){
+      h+='<div class="warnbox"><strong>These columns do not exist on the EMPLOYEES tab at all:</strong><br>'+
+         r.absentCols.join('<br>')+'</div>';
+    }
+    if(r.noRecord && r.noRecord.length){
+      h+='<div class="warnbox" style="border-color:#ef9a9a;background:#ffebee;color:#c62828">'+
+         '<strong>In payroll but not on the employee sheet ('+r.noRecord.length+')</strong><br>'+
+         r.noRecord.map(function(x){return x.employee_id+' — '+x.name;}).join('<br>')+'</div>';
+    }
+    if(r.fields && r.fields.length){
+      h+='<p class="sub" style="margin:14px 0 6px"><strong>What is missing, and for how many people</strong></p>'+
+         '<div style="display:flex;gap:8px;flex-wrap:wrap">';
+      r.fields.forEach(function(f){
+        h+='<span class="pill blocked">'+f.field+': '+f.count+'</span>';
+      });
+      h+='</div>';
+    }
+    if(r.people && r.people.length){
+      h+='<p class="sub" style="margin:16px 0 6px"><strong>Records to fix</strong> — click to open</p>';
+      r.people.forEach(function(p){
+        h+='<div class="qitem" onclick="sikOpen(\''+p.employee_id+'\')"><div>'+
+           '<div class="nm">'+p.employee_id+' &middot; '+(p.name||'(no name)')+
+           (p.leaver?' <span class="pill pending">left this month</span>':'')+'</div>'+
+           '<div class="meta" style="color:#c62828">'+p.missing.join(', ')+'</div>'+
+           (p.optional && p.optional.length? '<div class="meta">also blank: '+p.optional.join(', ')+'</div>':'')+
+           '</div><span class="pill blocked">'+p.missing.length+'</span></div>';
+      });
+    }
+    el('sikOut').innerHTML=h;
+    show('sikBuild');
+  }).withFailureHandler(function(e){msg('sikMsg',e.message,'err');})
+   .hrSikPreflight(y,m);
+}
+function sikOpen(eid){
+  var box=el('empSearch');
+  if(box){ box.value=eid; doSearch();
+    box.scrollIntoView({behavior:'smooth',block:'center'}); }
+}
+
+function runSik(){
+  var y=el('sikYear').value.trim(), m=el('sikMonth').value;
+  if(!y){ msg('sikMsg','Enter the year.','err'); return; }
+  msg('sikMsg','Building — this reads three tabs, so give it a moment…','warn');
+  el('sikOut').innerHTML='';
+  google.script.run.withSuccessHandler(function(res){
+    msg('sikMsg',res.msg,res.ok?'ok':'err');
+    if(!res.ok) return;
+    var h='<div class="ro">'+
+      '<div class="row"><span class="k">Tab created</span><span class="v">'+res.tab+'</span></div>'+
+      '<div class="row"><span class="k">Rows</span><span class="v">'+res.rows+'</span></div>'+
+      '<div class="row"><span class="k">Left during the month</span><span class="v">'+res.leavers+'</span></div>'+
+      '<div class="row"><span class="k">Total labour cost</span><span class="v">'+
+        Number(res.totalCost).toLocaleString('en-US')+' EGP</span></div></div>';
+    if(res.noRecord && res.noRecord.length){
+      h+='<div class="warnbox" style="margin-top:10px"><strong>In payroll but not on the employee sheet</strong> — '+
+         'their attribute columns will be blank:<br>'+res.noRecord.join(', ')+'</div>';
+    }
+    h+='<p class="sub" style="margin-top:10px">Open the <strong>'+res.tab+'</strong> tab in the sheet, then File &rarr; Download to send it on.</p>';
+    el('sikOut').innerHTML=h;
+  }).withFailureHandler(function(e){msg('sikMsg',e.message,'err');})
+   .hrSikReport(y,m);
+}
+
+// ---------- bulk field update ----------
+var BUFIELDS=[];
+function buFillFields(){
+  if(BUFIELDS.length) return;
+  google.script.run.withSuccessHandler(function(list){
+    BUFIELDS=list||[];
+    var o='<option value=""></option>';
+    BUFIELDS.forEach(function(f){ o+='<option value="'+f.field+'">'+f.label+'</option>'; });
+    el('buField').innerHTML=o;
+    el('buField').onchange=buFieldChanged;
+  }).withFailureHandler(function(){}).bulkFieldOptions();
+}
+function buFieldChanged(){
+  var f=el('buField').value;
+  var hints={
+    direct_manager:'Value must be an employee ID (EG0044) or a global manager ID. N-levels are rebuilt afterwards.',
+    dotted_manager:'Value must be an employee ID or a global manager ID.',
+    weekend_pattern:'Value must be exactly: Fri &amp; Sat, Sat &amp; Sun, or Rotational.',
+    project:'Value must exist in PROJECT_MAP. The cost centre follows automatically.',
+    cost_centre:'Free text.',
+    work_location:'Free text.',
+    contract_end_date:'Use yyyy-MM-dd, e.g. 2026-12-31.',
+    basic_salary:'Numbers only. The old and new figure both go to the change log.'
+  };
+  el('buHint').innerHTML=hints[f]||'';
+  el('buOut').innerHTML=''; hide('buApply');
+}
+function buPreview(){
+  var f=el('buField').value, t=el('buText').value;
+  if(!f){ msg('buMsg','Choose a field.','err'); return; }
+  if(!t.trim()){ msg('buMsg','Paste at least one line.','err'); return; }
+  msg('buMsg','Checking…','warn'); el('buOut').innerHTML='';
+  google.script.run.withSuccessHandler(function(res){
+    if(!res.ok){ msg('buMsg',res.msg,'err'); return; }
+    msg('buMsg',res.willChange+' of '+res.total+' line(s) would change.'+
+        (res.errors? ' '+res.errors+' invalid.' : '')+
+        (res.unchanged? ' '+res.unchanged+' already set.' : ''),
+        res.willChange? 'ok':'warn');
+    var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">'+
+      '<tr style="background:#EEEDFE"><th style="text-align:left;padding:6px">ID</th>'+
+      '<th style="text-align:left;padding:6px">Name</th>'+
+      '<th style="text-align:left;padding:6px">Now</th>'+
+      '<th style="text-align:left;padding:6px">Becomes</th>'+
+      '<th style="text-align:left;padding:6px"></th></tr>';
+    res.rows.forEach(function(r){
+      var bg = r.status==='error' ? '#ffebee' : (r.status==='same' ? '#f2f2f7' : '#fff');
+      var tag = r.status==='error' ? '<span class="pill blocked">skip</span>'
+              : r.status==='same'  ? '<span class="pill pending">no change</span>'
+              : '<span class="pill verified">will change</span>';
+      h+='<tr style="background:'+bg+';border-bottom:1px solid #e3e3ee">'+
+         '<td style="padding:6px">'+r.employee_id+'</td>'+
+         '<td style="padding:6px">'+(r.name||'—')+'</td>'+
+         '<td style="padding:6px;color:#6b6b80">'+(r.current||'—')+'</td>'+
+         '<td style="padding:6px;font-weight:bold">'+r.proposed+'</td>'+
+         '<td style="padding:6px">'+tag+(r.note?('<br><span style="font-size:11px;color:#c62828">'+r.note+'</span>'):'')+'</td></tr>';
+    });
+    el('buOut').innerHTML=h+'</table></div>';
+    if(res.willChange) show('buApply'); else hide('buApply');
+  }).withFailureHandler(function(e){msg('buMsg',e.message,'err');}).hrBulkUpdatePreview(f,t);
+}
+function buApply(){
+  var f=el('buField').value, t=el('buText').value;
+  if(!confirm('Apply these changes? Every one is written to the employee record and logged.')) return;
+  msg('buMsg','Applying…','warn'); el('buApply').disabled=true;
+  google.script.run.withSuccessHandler(function(res){
+    el('buApply').disabled=false;
+    msg('buMsg',res.msg,res.ok?'ok':'err');
+    if(res.ok){ el('buText').value=''; el('buOut').innerHTML=''; hide('buApply'); }
+  }).withFailureHandler(function(e){ el('buApply').disabled=false; msg('buMsg',e.message,'err'); })
+   .hrBulkUpdateApply(f,t);
+}
+
+// ---------- historic leavers ----------
+function lvbFillTypes(){
+  google.script.run.withSuccessHandler(function(list){
+    el('lvbTypes').innerHTML='Exit type must be one of: <strong>'+(list||[]).join('</strong>, <strong>')+'</strong>';
+  }).withFailureHandler(function(){}).historicExitTypes();
+}
+function lvbPreview(){
+  var t=el('lvbText').value;
+  if(!t.trim()){ msg('lvbMsg','Paste at least one line.','err'); return; }
+  msg('lvbMsg','Checking…','warn'); el('lvbOut').innerHTML='';
+  google.script.run.withSuccessHandler(function(res){
+    if(!res.ok){ msg('lvbMsg',res.msg,'err'); return; }
+    msg('lvbMsg',res.willChange+' of '+res.total+' line(s) would be closed.'+
+      (res.errors? ' '+res.errors+' invalid.':'')+
+      (res.unchanged? ' '+res.unchanged+' already have an exit date.':''),
+      res.willChange?'ok':'warn');
+    var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">'+
+      '<tr style="background:#EEEDFE"><th style="text-align:left;padding:6px">ID</th>'+
+      '<th style="text-align:left;padding:6px">Name</th>'+
+      '<th style="text-align:left;padding:6px">Now</th>'+
+      '<th style="text-align:left;padding:6px">Last day</th>'+
+      '<th style="text-align:left;padding:6px">Type</th>'+
+      '<th style="text-align:left;padding:6px"></th></tr>';
+    res.rows.forEach(function(r){
+      var bg = r.status==='error' ? '#ffebee' : (r.status==='same' ? '#f2f2f7' : '#fff');
+      var tag = r.status==='error' ? '<span class="pill blocked">skip</span>'
+              : r.status==='same'  ? '<span class="pill pending">already closed</span>'
+              : '<span class="pill verified">will close</span>';
+      h+='<tr style="background:'+bg+';border-bottom:1px solid #e3e3ee">'+
+         '<td style="padding:6px">'+r.employee_id+'</td>'+
+         '<td style="padding:6px">'+(r.name||'—')+'</td>'+
+         '<td style="padding:6px;color:#6b6b80">'+(r.current_status||'—')+'</td>'+
+         '<td style="padding:6px">'+r.exit_date+'</td>'+
+         '<td style="padding:6px">'+r.exit_type+'</td>'+
+         '<td style="padding:6px">'+tag+(r.note?('<br><span style="font-size:11px;color:#c62828">'+r.note+'</span>'):'')+'</td></tr>';
+    });
+    el('lvbOut').innerHTML=h+'</table></div>';
+    if(res.willChange) show('lvbApply'); else hide('lvbApply');
+  }).withFailureHandler(function(e){msg('lvbMsg',e.message,'err');}).hrBulkLeaversPreview(t);
+}
+function lvbApply(){
+  if(!confirm('Close these records? Their status becomes Closed and they disappear from every working view except the attrition report.')) return;
+  msg('lvbMsg','Closing…','warn'); el('lvbApply').disabled=true;
+  google.script.run.withSuccessHandler(function(res){
+    el('lvbApply').disabled=false;
+    msg('lvbMsg',res.msg,res.ok?'ok':'err');
+    if(res.ok){
+      var h='';
+      if(res.stillCovered && res.stillCovered.length){
+        h='<div class="warnbox" style="margin-top:10px"><strong>Still on medical cover — stop these with the insurer:</strong><br>'+
+          res.stillCovered.join('<br>')+'</div>';
+      }
+      el('lvbOut').innerHTML=h; el('lvbText').value=''; hide('lvbApply'); loadHR();
+    }
+  }).withFailureHandler(function(e){ el('lvbApply').disabled=false; msg('lvbMsg',e.message,'err'); })
+   .hrBulkLeaversApply(el('lvbText').value);
+}
+
+// ---------- contract generation ----------
+var CTTYPES=[];
+function ctFillTypes(){
+  if(CTTYPES.length) return;
+  google.script.run.withSuccessHandler(function(list){
+    CTTYPES=list||[];
+    var o='<option value=""></option>';
+    CTTYPES.forEach(function(t){ o+='<option>'+t+'</option>'; });
+    el('ctType').innerHTML=o;
+  }).withFailureHandler(function(){}).contractTypesAvailable();
+}
+function ctTypeChanged(){
+  var t=el('ctType').value, h='';
+  if(t==='Task-Based'){
+    h='<p class="sub" style="margin:14px 0 6px"><strong>These are per assignment</strong>, so they are not on the record. Fill them in and they go straight into the contract; leave them blank and they stay as placeholders for you to complete in Word.</p>'+
+      '<div class="grid">'+
+      '<div class="f"><label>Task / project name</label><input id="ctTaskName"></div>'+
+      '<div class="f"><label>Expected duration</label><input id="ctDuration" placeholder="e.g. 6 months"></div>'+
+      '</div>'+
+      '<div class="f" style="margin-top:10px"><label>Task description</label><input id="ctTaskDesc"></div>'+
+      '<div class="f" style="margin-top:10px"><label>Deliverables and acceptance criteria</label><input id="ctDeliv"></div>';
+  }
+  el('ctExtra').innerHTML=h;
+  if(el('ctId').value.trim()) ctCheck();
+}
+function ctCheck(){
+  var id=el('ctId').value.trim(), t=el('ctType').value;
+  if(!id){ el('ctWho').innerHTML=''; return; }
+  google.script.run.withSuccessHandler(function(r){
+    if(!r.found){ el('ctWho').innerHTML='<p class="sub" style="color:#c62828">'+(r.msg||'Not found')+'</p>'; return; }
+    var h='<div class="ro">'+
+      '<div class="row"><span class="k">Name</span><span class="v">'+r.name+'</span></div>'+
+      '<div class="row"><span class="k">Contract type on record</span><span class="v">'+(r.contract_type_on_record||'—')+'</span></div>'+
+      '<div class="row"><span class="k">Hire date</span><span class="v">'+(r.hire_date||'—')+'</span></div></div>';
+    if(t && r.contract_type_on_record && t!==r.contract_type_on_record){
+      h+='<div class="warnbox" style="margin-top:10px">You have picked <strong>'+t+'</strong> but the record says <strong>'+
+         r.contract_type_on_record+'</strong>. Check which is right before printing.</div>';
+    }
+    if(r.missing && r.missing.length){
+      h+='<div class="warnbox" style="margin-top:10px"><strong>Missing from the record ('+r.missing.length+')</strong> — '+
+         'these will print as placeholders:<br>'+r.missing.join(', ')+'</div>';
+    } else {
+      h+='<p class="sub" style="color:#2e7d32;margin-top:10px">Everything the contract needs is on the record.</p>';
+    }
+    el('ctWho').innerHTML=h;
+  }).withFailureHandler(function(e){el('ctWho').innerHTML='<p class="sub" style="color:#c62828">'+e.message+'</p>';})
+   .contractPreflight(id,t);
+}
+function ctGenerate(){
+  var id=el('ctId').value.trim(), t=el('ctType').value;
+  if(!id){ msg('ctMsg','Enter an employee ID.','err'); return; }
+  if(!t){ msg('ctMsg','Choose a contract type.','err'); return; }
+  var extras={};
+  if(el('ctTaskName')) extras.TASK_NAME=el('ctTaskName').value;
+  if(el('ctTaskDesc')) extras.TASK_DESCRIPTION=el('ctTaskDesc').value;
+  if(el('ctDeliv'))    extras.DELIVERABLES=el('ctDeliv').value;
+  if(el('ctDuration')) extras.DURATION=el('ctDuration').value;
+  el('ctBtn').disabled=true; msg('ctMsg','Generating…','warn'); el('ctOut').innerHTML='';
+  google.script.run.withSuccessHandler(function(res){
+    el('ctBtn').disabled=false;
+    msg('ctMsg',res.msg,res.ok?'ok':'err');
+    if(!res.ok) return;
+    el('ctOut').innerHTML='<div class="ro">'+
+      '<div class="row"><span class="k">Reference</span><span class="v">'+res.ref+'</span></div></div>'+
+      '<div class="bar"><a href="'+res.url+'" target="_blank" rel="noopener">'+
+      '<button class="ok">Download as Word</button></a>'+
+      '<a href="'+res.editUrl+'" target="_blank" rel="noopener"><button class="ghost">Open in Docs</button></a></div>';
+  }).withFailureHandler(function(e){ el('ctBtn').disabled=false; msg('ctMsg',e.message,'err'); })
+   .generateContract(id,t,extras);
+}
+
+// ---------- career history ----------
+function loadCareer(){
+  var id=el('chId').value.trim();
+  if(!id){ msg('chMsg','Enter an employee ID.','err'); return; }
+  el('chOut').innerHTML='<p class="sub">Loading…</p>';
+  google.script.run.withSuccessHandler(function(d){
+    if(!d.found){ el('chOut').innerHTML='<p class="sub" style="color:#c62828">'+(d.msg||'Not found')+'</p>'; return; }
+    var h='<div class="ro" style="margin-bottom:14px">'+
+      '<div class="row"><span class="k">Name</span><span class="v">'+d.name+'</span></div>'+
+      '<div class="row"><span class="k">Now</span><span class="v">'+(d.current.job_title||'—')+
+        (d.current.grade?(' &middot; '+d.current.grade):'')+'</span></div>'+
+      '<div class="row"><span class="k">Service</span><span class="v">'+d.months_service+' months</span></div>'+
+      '<div class="row"><span class="k">Last promotion</span><span class="v">'+
+        (d.last_promotion? (d.last_promotion+' — '+d.months_since_promotion+' months ago') : 'none recorded')+
+      '</span></div></div>';
+    if(!d.events.length){ el('chOut').innerHTML=h+'<p class="sub">No recorded changes. Anything before the system went live will not appear here.</p>'; return; }
+    d.events.forEach(function(g){
+      var tag = g.is_promotion ? '<span class="pill verified">promotion</span>'
+              : g.is_pay_only  ? '<span class="pill pending">pay review</span>' : '';
+      h+='<div class="qitem" style="cursor:default;align-items:flex-start"><div style="flex:1">'+
+         '<div class="nm">'+g.date+'</div>';
+      g.changes.forEach(function(c){
+        h+='<div class="meta">'+c.label+': '+c.from+' &rarr; <strong>'+c.to+'</strong>'+
+           (c.by?(' &middot; '+c.by):'')+'</div>';
+      });
+      h+='</div>'+tag+'</div>';
+    });
+    el('chOut').innerHTML=h;
+  }).withFailureHandler(function(e){el('chOut').innerHTML='<p class="sub" style="color:#c62828">'+e.message+'</p>';})
+   .careerHistory(id);
+}
+
+// ---------- HR leave administration ----------
+function showAdm(which){
+  ['admHol','admBack','admLiab','admAttr'].forEach(function(id){ hide(id); });
+  show(which==='hol'?'admHol':which==='back'?'admBack':which==='attr'?'admAttr':'admLiab');
+  if(which==='hol') fillHolidayDates();
+}
+function fillHolidayDates(){
+  if(el('holDate').options.length) return;
+  google.script.run.withSuccessHandler(function(list){
+    var o='<option value=""></option>';
+    (list||[]).forEach(function(h){ o+='<option value="'+h.date+'">'+h.date+' — '+h.name+'</option>'; });
+    el('holDate').innerHTML=o;
+  }).getHolidayList();
+}
+function runHolidayWorked(){
+  var ids=el('holIds').value, d=el('holDate').value, n=el('holNote').value;
+  if(!ids.trim()){ msg('hrAdmMsg','Paste at least one employee ID.','err'); return; }
+  msg('hrAdmMsg','Working…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('hrAdmMsg',res.msg,res.ok?'ok':'err');
+    if(res.ok) el('holIds').value='';
+  }).withFailureHandler(function(e){msg('hrAdmMsg',e.message,'err');}).hrBulkHolidayWorked(ids,d,n);
+}
+function runBacklog(){
+  var t=el('backText').value;
+  if(!t.trim()){ msg('hrAdmMsg','Paste at least one line.','err'); return; }
+  if(!confirm('Load these as already-approved leave? They will count against balances immediately.')) return;
+  msg('hrAdmMsg','Loading…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('hrAdmMsg',res.msg,res.ok?'ok':'err');
+    var h='';
+    if(res.errors && res.errors.length){
+      h='<p class="sub" style="color:#c62828"><strong>Skipped:</strong><br>'+res.errors.join('<br>')+'</p>';
+    }
+    el('backResult').innerHTML=h;
+    if(res.loaded) el('backText').value='';
+  }).withFailureHandler(function(e){msg('hrAdmMsg',e.message,'err');}).hrBulkBacklog(t);
+}
+function loadLiability(){
+  el('liabOut').innerHTML='<p class="sub">Running…</p>';
+  google.script.run.withSuccessHandler(function(res){
+    if(!res.rows.length){ el('liabOut').innerHTML='<p class="sub">No refused days recorded for '+res.year+'.</p>'; return; }
+    var h='<p class="sub"><strong>'+res.totalDays+' day(s)</strong> across '+res.rows.length+' employee(s) in '+res.year+'.</p>';
+    res.rows.forEach(function(r){
+      h+='<div class="qitem" style="cursor:default;align-items:flex-start"><div>'+
+         '<div class="nm">'+r.name+' &middot; '+r.employee_id+'</div>';
+      r.requests.forEach(function(q){
+        h+='<div class="meta">'+q.dates+' — '+q.rejected+' day(s) refused'+(q.by?(' by '+q.by):'')+(q.when?(' on '+q.when):'')+'</div>';
+      });
+      h+='</div><span class="pill blocked">'+r.days+' day(s)</span></div>';
+    });
+    el('liabOut').innerHTML=h;
+  }).withFailureHandler(function(e){el('liabOut').innerHTML='<p class="sub" style="color:#c62828">'+e.message+'</p>';})
+   .hrRejectedDaysReport(new Date().getFullYear());
+}
+
+function loadAttrition(){
+  el('attrOut').innerHTML='<p class="sub">Running…</p>';
+  google.script.run.withSuccessHandler(function(r){
+    if(!r.leavers.length){ el('attrOut').innerHTML='<p class="sub">No leavers found'+(r.year?(' for '+r.year):'')+'.</p>'; return; }
+    var h='<div style="display:flex;gap:24px;flex-wrap:wrap;margin:12px 0">'+
+      '<div><div style="font-size:24px;font-weight:bold;color:#2800C8">'+r.total+'</div><div class="sub" style="margin:0">leavers</div></div>'+
+      '<div><div style="font-size:24px;font-weight:bold">'+r.headcount+'</div><div class="sub" style="margin:0">current headcount</div></div>'+
+      '<div><div style="font-size:24px;font-weight:bold">'+r.rate+'%</div><div class="sub" style="margin:0">attrition rate</div></div>'+
+      '<div><div style="font-size:24px;font-weight:bold">'+r.avgTenureMonths+'</div><div class="sub" style="margin:0">avg tenure (months)</div></div>'+
+      '</div>';
+    var chips=function(title,obj){
+      var keys=Object.keys(obj); if(!keys.length) return '';
+      var c='<p class="sub" style="margin:10px 0 4px"><strong>'+title+'</strong></p><div style="display:flex;gap:8px;flex-wrap:wrap">';
+      keys.sort(function(a,b){return obj[b]-obj[a];}).forEach(function(k){
+        c+='<span class="pill pending">'+k+': '+obj[k]+'</span>';
+      });
+      return c+'</div>';
+    };
+    h+=chips('By reason', r.byType);
+    h+=chips('By month', r.byMonth);
+    h+=chips('By project', r.byProject);
+    h+='<p class="sub" style="margin:16px 0 6px"><strong>Individual leavers</strong></p>';
+    r.leavers.forEach(function(l){
+      h+='<div class="qitem" style="cursor:default"><div>'+
+         '<div class="nm">'+l.name+' &middot; '+l.employee_id+'</div>'+
+         '<div class="meta">'+(l.job_title||'')+(l.project?(' &middot; '+l.project):'')+'</div>'+
+         '<div class="meta">'+l.hire_date+' to '+l.exit_date+
+         (l.tenure_months!==''?(' &middot; '+l.tenure_months+' months'):'')+'</div></div>'+
+         '<span class="pill blocked">'+l.exit_type+'</span></div>';
+    });
+    el('attrOut').innerHTML=h;
+  }).withFailureHandler(function(e){el('attrOut').innerHTML='<p class="sub" style="color:#c62828">'+e.message+'</p>';})
+   .hrAttritionReport(el('attrYear').value);
+}
+
+// ===================== RESIGNATION (employee) =====================
+function loadResignation(){
+  google.script.run.withSuccessHandler(renderResignation).withFailureHandler(function(e){
+    el('resignBody').innerHTML='<div class="card"><p class="sub" style="color:#c62828">'+e.message+'</p></div>';
+  }).getMyResignation();
+}
+function renderResignation(info){
+  if(!info.found){ el('resignBody').innerHTML='<div class="card"><p class="sub">No employee record linked to your account.</p></div>'; return; }
+  var r=info.existing;
+  var h='';
+  if(r && ['Pending','Accepted','Auto-approved'].indexOf(r.final_status)!==-1){
+    var agreed=r.agreed_last_day||'';
+    var pill = r.final_status==='Pending'?'pending':'verified';
+    h+='<div class="card"><h2>Your resignation</h2>'+
+       '<div class="ro">'+
+       '<div class="row"><span class="k">Reference</span><span class="v">'+r.resignation_id+'</span></div>'+
+       '<div class="row"><span class="k">Submitted</span><span class="v">'+r.submitted_at+'</span></div>'+
+       '<div class="row"><span class="k">You proposed</span><span class="v">'+r.proposed_last_day+'</span></div>'+
+       (agreed?'<div class="row"><span class="k">Agreed last day</span><span class="v">'+agreed+'</span></div>':'')+
+       '<div class="row"><span class="k">Status</span><span class="v">'+r.final_status+'</span></div>'+
+       '</div>';
+    if(r.final_status==='Pending'){
+      h+='<div class="warnbox" style="margin-top:14px">Your managers are agreeing the date. '+
+         'If they have not agreed within 10 days of your submission, the date you proposed will stand.</div>';
+    }
+    if(r.withdraw_status==='Pending manager'){
+      h+='<div class="warnbox" style="margin-top:14px">You have asked to withdraw this. Your manager needs to agree — you will be told either way.</div>';
+    } else {
+      h+='<div class="bar"><button class="ghost" onclick="toggleWithdraw()">Withdraw my resignation</button></div>'+
+         '<div id="wdBox" class="hide" style="margin-top:12px">'+
+         '<div id="wdMsg" class="msg"></div>'+
+         (r.can_withdraw_freely
+            ? '<p class="sub">You are within the 10-day window, so this takes effect immediately — no approval needed.</p>'
+            : '<p class="sub">It is more than 10 days since you resigned, so your manager will need to agree to this.</p>')+
+         '<div class="f"><label>Anything you want to add (optional)</label><input id="wdReason"></div>'+
+         '<div class="bar"><button onclick="doWithdraw()">Confirm withdrawal</button></div></div>';
+    }
+    h+='</div>';
+    el('resignBody').innerHTML=h;
+    return;
+  }
+  // no open resignation — show the form
+  h+='<div class="card"><h2>Resign</h2>'+
+     '<p class="sub">Choose your proposed last working day. Your direct and dotted managers will agree the final date between them — neither can overrule the other. '+
+     'If they have not agreed within 10 days, the date you propose here will stand.</p>'+
+     '<div id="rgMsg" class="msg"></div>'+
+     '<div class="grid">'+
+       '<div class="f"><label>Proposed last working day</label><input type="date" id="rgDate"></div>'+
+       '<div class="f"><label>Reason (optional)</label><input id="rgReason" placeholder="You do not have to give one"></div>'+
+     '</div>'+
+     '<div class="warnbox" style="margin-top:14px">The statutory notice period is two months. A shorter notice can be agreed with your managers. '+
+     'You can withdraw a resignation yourself within 10 days; after that your manager must agree.</div>'+
+     '<div class="bar"><button onclick="submitResign()">Submit my resignation</button></div></div>';
+  if(r){
+    h+='<div class="card"><h2>Previous</h2><div class="qitem" style="cursor:default"><div>'+
+       '<div class="nm">'+r.resignation_id+'</div><div class="meta">Proposed '+r.proposed_last_day+'</div></div>'+
+       '<span class="pill blocked">'+r.final_status+'</span></div></div>';
+  }
+  el('resignBody').innerHTML=h;
+}
+function submitResign(){
+  var d=el('rgDate').value;
+  if(!d){ msg('rgMsg','Please choose your proposed last working day.','err'); return; }
+  if(!confirm('Submit your resignation with a proposed last working day of '+d+'?')) return;
+  msg('rgMsg','Submitting…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('rgMsg',res.msg,res.ok?'ok':'err');
+    if(res.ok) loadResignation();
+  }).withFailureHandler(function(e){msg('rgMsg',e.message,'err');})
+   .submitResignation({proposed_last_day:d, reason:el('rgReason').value});
+}
+function toggleWithdraw(){ el('wdBox').classList.toggle('hide'); }
+function doWithdraw(){
+  if(!confirm('Withdraw your resignation?')) return;
+  msg('wdMsg','Sending…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('wdMsg',res.msg,res.ok?'ok':'err');
+    if(res.ok) setTimeout(loadResignation,1200);
+  }).withFailureHandler(function(e){msg('wdMsg',e.message,'err');})
+   .withdrawResignation(el('wdReason').value);
+}
+
+// ===================== RESIGNATION (manager) =====================
+function loadResignApprovals(){
+  google.script.run.withSuccessHandler(renderResignApprovals).withFailureHandler(function(e){
+    el('rsList').innerHTML='<p class="sub">'+e.message+'</p>';
+  }).getResignationApprovals();
+}
+function renderResignApprovals(res){
+  if(!res.isApprover||!res.items.length){ el('rsList').innerHTML='<p class="sub">Nothing waiting on you.</p>'; return; }
+  var h='';
+  res.items.forEach(function(r){
+    if(r.isWithdrawal){
+      h+='<div class="qitem" style="align-items:flex-start;cursor:default"><div style="flex:1">'+
+         '<div class="nm">'+r.employee_name+' — wants to withdraw</div>'+
+         '<div class="meta">Resigned '+r.days_since+' days ago &middot; last day was '+(r.agreed_last_day||r.proposed_last_day)+'</div>'+
+         (r.withdraw_reason?('<div class="meta">Their reason: '+r.withdraw_reason+'</div>'):'')+
+         '<input id="wc'+r.row+'" placeholder="Comment (optional)" style="width:100%;margin-top:8px;padding:6px;border:1px solid #e3e3ee;border-radius:5px"></div>'+
+         '<div style="text-align:right;white-space:nowrap;margin-left:12px">'+
+         '<button class="ok" style="padding:7px 14px" onclick="decideWd('+r.row+',true)">Agree — they stay</button><br>'+
+         '<button class="ghost" style="margin-top:6px;padding:6px 12px" onclick="decideWd('+r.row+',false)">Decline</button>'+
+         '</div></div>';
+      return;
+    }
+    var mine = r.role==='direct'? r.direct_date : r.dotted_date;
+    var other= r.role==='direct'? r.dotted_date : r.direct_date;
+    h+='<div class="qitem" style="align-items:flex-start;cursor:default"><div style="flex:1">'+
+       '<div class="nm">'+r.employee_name+' &middot; '+r.employee_id+'</div>'+
+       '<div class="meta">Proposed last working day: <strong>'+r.proposed_last_day+'</strong></div>'+
+       (r.reason?('<div class="meta">Reason: '+r.reason+'</div>'):'')+
+       '<div class="meta">Resigned '+r.days_since+' day(s) ago</div>'+
+       (mine?('<div class="meta" style="color:#2e7d32">You proposed '+mine+'</div>'):'')+
+       (other?('<div class="meta" style="color:#8d6e00">The other manager proposed '+other+'</div>'):'')+
+       (mine&&other&&mine!==other?('<div class="meta" style="color:#c62828"><strong>You have not agreed.</strong> Neither date overrides the other — you need to converge.</div>'):'')+
+       '<div class="meta" style="color:#8d6e00">If nothing is agreed in '+r.days_left+' more day(s), '+r.proposed_last_day+' stands automatically.</div>'+
+       '<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">'+
+         '<label style="font-size:12px;color:#6b6b80">Propose a different date</label>'+
+         '<input type="date" id="rd'+r.row+'" style="padding:6px;border:1px solid #e3e3ee;border-radius:5px">'+
+         '<input id="rc'+r.row+'" placeholder="Comment (optional)" style="flex:1;min-width:150px;padding:6px;border:1px solid #e3e3ee;border-radius:5px">'+
+       '</div></div>'+
+       '<div style="text-align:right;white-space:nowrap;margin-left:12px">'+
+         '<button class="ok" style="padding:7px 14px" onclick="decideRs('+r.row+',\'accept\')">Accept '+r.proposed_last_day+'</button><br>'+
+         '<button class="ghost" style="margin-top:6px;padding:6px 12px" onclick="decideRs('+r.row+',\'propose\')">Propose my date</button>'+
+       '</div></div>';
+  });
+  el('rsList').innerHTML=h;
+}
+function decideRs(row,what){
+  var d=el('rd'+row)?el('rd'+row).value:'';
+  var c=el('rc'+row)?el('rc'+row).value:'';
+  if(what==='propose' && !d){ msg('rsMsg','Choose the date you want to propose.','err'); return; }
+  msg('rsMsg','Saving…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('rsMsg', res.agreed? ('Agreed — last working day '+res.date+'. HR has been notified.') : (res.msg||'Recorded.'), res.agreed?'ok':'warn');
+    loadResignApprovals();
+  }).withFailureHandler(function(e){msg('rsMsg',e.message,'err');}).decideResignation(row,what,d,c);
+}
+function decideWd(row,accept){
+  if(!confirm(accept?'Agree to withdraw this resignation? They will stay.':'Decline the withdrawal? Their notice continues.')) return;
+  msg('rsMsg','Saving…','warn');
+  google.script.run.withSuccessHandler(function(){ msg('rsMsg','Recorded.','ok'); loadResignApprovals(); loadClearance(''); })
+   .withFailureHandler(function(e){msg('rsMsg',e.message,'err');})
+   .decideWithdrawal(row,accept,el('wc'+row)?el('wc'+row).value:'');
+}
+
+// ===================== CLEARANCE =====================
+var CLTASKS=null;
+function loadClearance(target){
+  google.script.run.withSuccessHandler(function(res){ CLTASKS=res; renderClearance(target); })
+   .withFailureHandler(function(e){ var t=el('clList'+(target||'')); if(t) t.innerHTML='<p class="sub">'+e.message+'</p>'; })
+   .getMyClearanceTasks();
+}
+function renderClearance(target){
+  var box=el('clList'+(target||''));
+  if(!box) return;
+  var items=(CLTASKS&&CLTASKS.items)||[];
+  // filter by which panel we're rendering into
+  var want = target==='IT'?'it' : target==='FAC'?'fac' : target==='HR'?'hr' : 'handover';
+  var rows=items.filter(function(r){
+    return r.stages.some(function(s){ return want==='handover'? s.indexOf('handover')===0 : s===want; });
+  });
+  if(!rows.length){ box.innerHTML='<p class="sub">Nothing waiting on you.</p>'; return; }
+  var h='';
+  rows.forEach(function(r){
+    h+='<div class="qitem" style="align-items:flex-start;cursor:default"><div style="flex:1">'+
+       '<div class="nm">'+r.employee_name+' &middot; '+r.employee_id+'</div>'+
+       '<div class="meta">Last working day: '+(r.last_working_day||'TBC')+' &middot; '+r.clearance_id+'</div>';
+    if(want==='handover'){
+      h+='<p class="sub" style="margin:10px 0 4px">Confirm all handover activities are complete. '+
+         'IT and Facilities cannot start collecting equipment until both managers have confirmed.</p>'+
+         '<input id="hn'+r.row+'" placeholder="Note (optional)" style="width:100%;padding:6px;border:1px solid #e3e3ee;border-radius:5px">'+
+         '</div><div style="text-align:right;margin-left:12px">'+
+         '<button class="ok" style="padding:7px 14px" onclick="doHandover('+r.row+')">Handover complete</button></div></div>';
+      return;
+    }
+    var list = want==='it'? r.itItems : want==='fac'? r.facItems : r.hrItems;
+    h+='<div style="margin-top:10px">';
+    list.forEach(function(it){
+      var opts = want==='hr' || it.noAsset ? ['','Done','Not done'] : ['','Returned','Not returned'];
+      var o=''; opts.forEach(function(x){ o+='<option'+(x===r[it.f]?' selected':'')+'>'+x+'</option>'; });
+      h+='<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:6px;flex-wrap:wrap">'+
+         '<div class="f" style="flex:1;min-width:170px;margin:0"><label>'+it.label+'</label>'+
+         '<select data-cl="'+it.f+'" data-row="'+r.row+'" onchange="toggleAmt(this,\''+it.f+'\','+r.row+')">'+o+'</select></div>'+
+         (!it.noAsset && want!=='hr'
+           ? '<div class="f hide" id="amtbox_'+it.f+'_'+r.row+'" style="width:150px;margin:0">'+
+             '<label>Amount to charge (EGP)</label>'+
+             '<input type="number" min="0" data-amt="'+it.f+'" data-row="'+r.row+'" placeholder="0"></div>'
+           : '')+
+         '</div>';
+    });
+    if(want==='fac'){
+      h+='<div class="f" style="margin-top:10px"><label>Outstanding loan or advance?</label>'+
+         '<select id="ln'+r.row+'"><option>No</option><option>Yes</option></select></div>'+
+         '<div class="f"><label>Amount (EGP)</label><input id="la'+r.row+'" type="number" placeholder="0"></div>';
+    }
+    if(want!=='hr'){
+      h+='<p class="sub" style="margin:8px 0 0">Enter the amount to charge for anything not returned — judge it now, allowing for age and condition. Leave it blank if nothing should be charged.</p>';
+    }
+    h+='<input id="cn'+r.row+'" placeholder="Note (optional)" style="width:100%;margin-top:8px;padding:6px;border:1px solid #e3e3ee;border-radius:5px">'+
+       '</div></div>'+
+       '<div style="text-align:right;margin-left:12px;white-space:nowrap">'+
+       '<button class="ok" style="padding:7px 14px" onclick="submitCl('+r.row+',\''+want+'\',\''+(target||'')+'\')">Save</button></div></div>';
+  });
+  box.innerHTML=h;
+}
+function toggleAmt(sel,field,row){
+  var box=el('amtbox_'+field+'_'+row);
+  if(!box) return;
+  if(sel.value==='Not returned') box.classList.remove('hide'); else box.classList.add('hide');
+}
+function doHandover(row){
+  if(!confirm('Confirm all handover activities are complete?')) return;
+  msg('clMsg','Saving…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('clMsg', res.bothConfirmed? 'Handover complete. IT and Facilities have been asked to collect equipment.' : 'Recorded. Waiting on the other manager.','ok');
+    loadClearance('');
+  }).withFailureHandler(function(e){msg('clMsg',e.message,'err');})
+   .confirmHandover(row, el('hn'+row)?el('hn'+row).value:'');
+}
+function submitCl(row,dept,target){
+  var items={};
+  document.querySelectorAll('[data-cl][data-row="'+row+'"]').forEach(function(s){ items[s.dataset.cl]=s.value; });
+  var amounts={};
+  document.querySelectorAll('[data-amt][data-row="'+row+'"]').forEach(function(i){ amounts[i.dataset.amt]=i.value; });
+  var note=el('cn'+row)?el('cn'+row).value:'';
+  var mid='clMsg'+(target||'');
+  msg(mid,'Saving…','warn');
+  if(dept==='hr'){
+    google.script.run.withSuccessHandler(function(res){
+      msg(mid, res.cleared? 'Cleared. Settlement can be released — HR has the deduction total.' : (res.msg||'Saved.'), res.ok?'ok':'err');
+      loadClearance(target);
+    }).withFailureHandler(function(e){msg(mid,e.message,'err');}).hrCompleteClearance(row,items,note);
+    return;
+  }
+  var loans;
+  if(dept==='fac'){
+    loans={has: el('ln'+row)&&el('ln'+row).value==='Yes',
+           amount: el('la'+row)?el('la'+row).value:'' , note:''};
+  }
+  google.script.run.withSuccessHandler(function(res){
+    var m='Saved.';
+    if(res.missing&&res.missing.length) m='Saved. Not returned: '+res.missing.join(', ')+
+      (res.deduction? (' — EGP '+res.deduction+' will be deducted.') : '');
+    msg(mid,m,'ok'); loadClearance(target);
+  }).withFailureHandler(function(e){msg(mid,e.message,'err');})
+   .submitClearanceItems(row,dept,items,amounts,note,loans);
+}
+
+function nsTypeChanged(){
+  var t=el('nsType').value;
+  el('nsDateLabel').textContent = t==='Drop out' ? 'Last day' : 'Absent since';
+  el('nsTypeNote').innerHTML = t==='Drop out'
+    ? 'They have told us they are leaving. Their managers and HR are notified, payment is held pending clearance, and equipment recovery starts.'
+    : 'Nobody knows where they are. The notification asks recipients to reply urgently if they know anything, because the hold affects their pay.';
+}
+function fillReasons(){
+  if(el('nsReason').options.length) return;
+  var o='<option value=""></option>';
+  (LISTS['leaving_reason']||[]).forEach(function(x){ o+='<option>'+x+'</option>'; });
+  el('nsReason').innerHTML=o;
+}
+
+// ===================== NO SHOW =====================
+function lookupNoShow(){
+  var id=el('nsId').value.trim();
+  if(!id){ el('nsWho').innerHTML=''; return; }
+  google.script.run.withSuccessHandler(function(r){
+    if(!r.found){ el('nsWho').innerHTML='<span style="color:#c62828">'+(r.msg||'Not found')+'</span>'; return; }
+    el('nsWho').innerHTML='<strong>'+r.name+'</strong><br>'+(r.job_title||'')+
+      (r.project?(' &middot; '+r.project):'')+'<br>Status: '+r.status;
+  }).lookupEmployeeForNoShow(id);
+}
+function submitNoShow(){
+  var p={employee_id:el('nsId').value, absent_since:el('nsSince').value,
+         event_type:el('nsType').value, leaving_reason:el('nsReason').value,
+         reason_detail:el('nsDetail').value,
+         note:el('nsNote').value, cc_list:el('nsCc').value};
+  if(!p.employee_id){ msg('nsMsg','Enter the employee ID.','err'); return; }
+  if(!p.absent_since){ msg('nsMsg','Enter the date they were last expected.','err'); return; }
+  if(!confirm('Report this '+p.event_type.toLowerCase()+'? Their payment will be put on hold.')) return;
+  msg('nsMsg','Submitting…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('nsMsg',res.msg,res.ok?'ok':'err');
+    if(res.ok){ el('nsId').value=''; el('nsSince').value=''; el('nsNote').value=''; el('nsCc').value=''; el('nsWho').innerHTML=''; el('nsDetail').value=''; el('nsReason').value=''; }
+  }).withFailureHandler(function(e){msg('nsMsg',e.message,'err');}).reportNoShow(p);
+}
+function loadNoShows(){
+  google.script.run.withSuccessHandler(function(rows){
+    if(!rows.length){ el('nsHrList').innerHTML='<p class="sub">No open no shows.</p>'; return; }
+    var h='';
+    rows.forEach(function(r){
+      h+='<div class="qitem" style="align-items:flex-start;cursor:default"><div style="flex:1">'+
+         '<div class="nm">'+r.employee_name+' &middot; '+r.employee_id+'</div>'+
+         '<div class="meta">'+(r.event_type||'No show')+' &middot; from '+r.absent_since+(r.days_absent!==''?(' — '+r.days_absent+' day(s)'):'')+'</div>'+
+         (r.leaving_reason?('<div class="meta">Reason: '+r.leaving_reason+(r.reason_detail?(' — '+r.reason_detail):'')+'</div>'):'')+
+         '<div class="meta">Reported by '+(r.reporter_name||r.reported_by)+' &middot; '+r.noshow_id+'</div>'+
+         (r.last_seen_note?('<div class="meta">'+r.last_seen_note+'</div>'):'')+
+         '<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">'+
+           '<select id="no'+r.row+'" style="padding:6px;border:1px solid #e3e3ee;border-radius:5px">'+
+             '<option>Returned to work</option><option>Proceeding to termination</option>'+
+             '<option>Contract ended</option><option>Still unresolved</option></select>'+
+           '<input id="nn'+r.row+'" placeholder="Note" style="flex:1;min-width:150px;padding:6px;border:1px solid #e3e3ee;border-radius:5px">'+
+         '</div></div>'+
+         '<div style="text-align:right;margin-left:12px;white-space:nowrap">'+
+         '<span class="pill blocked">on hold</span><br>'+
+         '<button class="ok" style="margin-top:8px;padding:7px 14px" onclick="resolveNs('+r.row+')">Resolve</button></div></div>';
+    });
+    el('nsHrList').innerHTML=h;
+  }).withFailureHandler(function(e){el('nsHrList').innerHTML='<p class="sub">'+e.message+'</p>';}).hrGetNoShows();
+}
+function resolveNs(row){
+  var o=el('no'+row).value;
+  if(!confirm('Record the outcome as "'+o+'"?')) return;
+  msg('nsHrMsg','Saving…','warn');
+  google.script.run.withSuccessHandler(function(){ msg('nsHrMsg','Recorded.','ok'); loadNoShows(); })
+   .withFailureHandler(function(e){msg('nsHrMsg',e.message,'err');})
+   .hrResolveNoShow(row,o,el('nn'+row)?el('nn'+row).value:'');
+}
+
+// ===================== TERMINATION =====================
+var TMCTX=null;
+function lookupTerm(){
+  var id=el('tmId').value.trim();
+  if(!id){ el('tmWho').innerHTML=''; return; }
+  google.script.run.withSuccessHandler(function(c){
+    TMCTX=c;
+    if(!c.found){ el('tmWho').innerHTML='<span style="color:#c62828">'+(c.msg||'Not found')+'</span>'; return; }
+    var probation='';
+    if(c.probation && c.probation.applies){
+      probation = c.probation.open
+        ? '<br><span style="color:#2e7d32">In probation — '+c.probation.daysLeft+' day(s) left to decide</span>'
+        : '<br><span style="color:#c62828">Probation window closed '+Math.abs(c.probation.daysLeft)+' day(s) ago — they are confirmed</span>';
+    }
+    el('tmWho').innerHTML='<strong>'+c.name+'</strong><br>'+(c.job_title||'')+
+      (c.project?(' &middot; '+c.project):'')+'<br>Hired '+c.hire_date+probation;
+    var o='<option value=""></option>';
+    (c.reasons||[]).forEach(function(r){ o+='<option>'+r+'</option>'; });
+    el('tmReason').innerHTML=o;
+    if(c.contract_end) el('tmDate').value=c.contract_end;
+  }).getTerminationContext(id);
+}
+function tmReasonChanged(){
+  var r=el('tmReason').value, h='';
+  if(r==='Violation'){
+    h='<div class="f" style="margin-top:10px"><label>Evidence — what happened, when, and any warnings already issued</label>'+
+      '<input id="tmEvidence" placeholder="Required. HR cannot approve on assertion alone."></div>'+
+      '<div class="warnbox" style="margin-top:10px">This goes to HR for review. Nothing changes for the employee until HR approves. '+
+      'Email any supporting documents to HR with the case reference in the subject line.</div>';
+  } else if(r==='Workforce reduction (WFR)'){
+    h='<div class="f" style="margin-top:10px"><label>Approved plan reference</label>'+
+      '<input id="tmPlan" placeholder="The approved plan or business case this sits under"></div>';
+  } else if(r==='Failed probation'){
+    var p=TMCTX&&TMCTX.probation;
+    if(p&&p.applies&&!p.open){
+      h='<div class="warnbox" style="margin-top:10px;border-color:#ef9a9a;background:#ffebee;color:#c62828">'+
+        'The probation window closed '+Math.abs(p.daysLeft)+' day(s) ago. They are confirmed in role, so this cannot go through '+
+        'as a probation failure. Speak to HR about the options.</div>';
+    }
+  } else if(r==='Contract ended — no renewal'){
+    h='<p class="sub" style="margin-top:10px">The last working day is pre-filled from their contract end date. Change it if that is wrong.</p>';
+  }
+  el('tmExtra').innerHTML=h;
+}
+function submitTerm(){
+  var p={employee_id:el('tmId').value, reason:el('tmReason').value,
+         proposed_last_day:el('tmDate').value, details:el('tmDetails').value,
+         evidence_note: el('tmEvidence')?el('tmEvidence').value:'',
+         plan_reference: el('tmPlan')?el('tmPlan').value:''};
+  if(!p.employee_id){ msg('tmMsg','Enter the employee ID.','err'); return; }
+  if(!p.reason){ msg('tmMsg','Choose a reason.','err'); return; }
+  if(!confirm('Submit this termination for '+(TMCTX&&TMCTX.name||p.employee_id)+'?')) return;
+  msg('tmMsg','Submitting…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('tmMsg',res.msg,res.ok?'ok':'err');
+    if(res.ok){ el('tmId').value=''; el('tmDetails').value=''; el('tmWho').innerHTML=''; el('tmExtra').innerHTML=''; }
+  }).withFailureHandler(function(e){msg('tmMsg',e.message,'err');}).initiateTermination(p);
+}
+
+function loadTerminations(){
+  google.script.run.withSuccessHandler(function(rows){
+    if(!rows.length){ el('tmHrList').innerHTML='<p class="sub">Nothing awaiting a decision.</p>'; return; }
+    var h='';
+    rows.forEach(function(r){
+      h+='<div class="qitem" style="align-items:flex-start;cursor:default"><div style="flex:1">'+
+         '<div class="nm">'+r.employee_name+' &middot; '+r.employee_id+'</div>'+
+         '<div class="meta">'+r.reason+' &middot; raised by '+r.initiated_by+' &middot; '+r.termination_id+'</div>'+
+         (r.proposed_last_day?('<div class="meta">Proposed last day: '+r.proposed_last_day+'</div>'):'')+
+         (r.details?('<div class="meta">'+r.details+'</div>'):'')+
+         (r.evidence_note?('<div class="ro" style="margin-top:8px"><div class="row"><span class="k">Evidence</span><span class="v" style="text-align:right;max-width:60%">'+r.evidence_note+'</span></div></div>'):'')+
+         '<input id="tn'+r.row+'" placeholder="Your note" style="width:100%;margin-top:8px;padding:6px;border:1px solid #e3e3ee;border-radius:5px"></div>'+
+         '<div style="text-align:right;margin-left:12px;white-space:nowrap">'+
+         '<button class="ok" style="padding:7px 14px" onclick="decideTerm('+r.row+',true)">Approve</button><br>'+
+         '<button class="ghost" style="margin-top:6px;padding:6px 12px" onclick="decideTerm('+r.row+',false)">Reject</button></div></div>';
+    });
+    el('tmHrList').innerHTML=h;
+  }).withFailureHandler(function(e){el('tmHrList').innerHTML='<p class="sub">'+e.message+'</p>';}).hrGetTerminations();
+}
+function decideTerm(row,approve){
+  if(!confirm(approve? 'Approve this termination? Payment will be held and clearance opened.'
+                     : 'Reject this? The manager will be told and nothing will change for the employee.')) return;
+  msg('tmHrMsg','Saving…','warn');
+  google.script.run.withSuccessHandler(function(){ msg('tmHrMsg','Recorded.','ok'); loadTerminations(); })
+   .withFailureHandler(function(e){msg('tmHrMsg',e.message,'err');})
+   .hrDecideTermination(row,approve,el('tn'+row)?el('tn'+row).value:'');
+}
+
+// ===================== EMPLOYEE FILE REVIEW =====================
+var FRDATA=null;
+function loadFileProgress(){
+  google.script.run.withSuccessHandler(function(p){
+    el('frProgress').innerHTML=
+      '<strong>'+p.reviewed+'</strong> of '+p.total+' files reviewed &middot; '+
+      '<strong>'+p.signed+'</strong> contracts signed &middot; '+
+      '<strong>'+p.docsComplete+'</strong> complete files'+
+      (p.unsigned? (' &middot; <span style="color:#c62828">'+p.unsigned+' unsigned</span>'):'');
+  }).withFailureHandler(function(){}).fileReviewProgress();
+}
+function openFileReview(){
+  var id=el('frId').value.trim();
+  if(!id){ msg('frMsg','Enter an employee ID.','err'); return; }
+  el('frBody').innerHTML='<p class="sub">Loading…</p>';
+  google.script.run.withSuccessHandler(renderFileReview).withFailureHandler(function(e){
+    el('frBody').innerHTML='<p class="sub" style="color:#c62828">'+e.message+'</p>';
+  }).getFileReview(id);
+}
+function renderFileReview(d){
+  if(!d.found){ el('frBody').innerHTML='<p class="sub" style="color:#c62828">'+(d.msg||'Not found')+'</p>'; return; }
+  FRDATA=d;
+  var r=d.review||{};
+  var h='<div class="ro" style="margin-bottom:14px">'+
+    '<div class="row"><span class="k">Name</span><span class="v">'+d.name+'</span></div>'+
+    '<div class="row"><span class="k">Hired</span><span class="v">'+d.hire_date+' ('+(d.months_service||0)+' months)</span></div>'+
+    '<div class="row"><span class="k">Job title</span><span class="v">'+(d.job_title||'—')+'</span></div>'+
+    '<div class="row"><span class="k">Employment relationship</span><span class="v">'+(d.company_type||'—')+'</span></div>'+
+    (d.non_employee? '' : '<div class="row"><span class="k">Contract type</span><span class="v">'+(d.contract_type||'—')+'</span></div>')+
+    '</div>';
+
+  if(d.non_employee){
+    // Not our employee. Their vendor is the employer of record, so the employment
+    // paperwork is the vendor's obligation — we confirm it exists, we do not collect it.
+    h+='<div class="warnbox">'+(d.company_type)+' — not a Konecta employee. '+
+       'No employment contract and no document collection: their vendor is the employer of record. '+
+       'What we need is the NDA and consent signed, and confirmation that the vendor holds the employment paperwork.</div>';
+    h+='<h3>What is on file</h3>'+
+       '<div class="grid">'+
+       '<div class="f"><label>NDA and consent signed?</label><select id="frNda">'+
+         '<option value="">—</option>'+
+         '<option value="Yes"'+(r.nda_signed==='Yes'?' selected':'')+'>Yes</option>'+
+         '<option value="No"'+(r.nda_signed==='No'?' selected':'')+'>No</option></select></div>'+
+       '<div class="f"><label>Date signed</label><input type="date" id="frNdaDate" value="'+(r.nda_signed_date||'')+'"></div>'+
+       '</div>'+
+       '<label style="display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid #e3e3ee;border-radius:6px;margin-top:12px;cursor:pointer">'+
+       '<input type="checkbox" id="frVendor"'+(r.vendor_confirmed==='Yes'?' checked':'')+' style="margin-top:3px">'+
+       '<span><strong>Confirmed with the vendor that they hold the employment documents</strong>'+
+       '<br><span class="sub" style="margin:0">Ask the subcontractor for this — do not assume it. Tick only once you have been told.</span></span></label>';
+  } else {
+    h+='<h3>Documents in the file</h3><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">';
+    d.documents.forEach(function(x){
+      var checked = x.status==='Received' ? ' checked':'';
+      h+='<label style="display:flex;gap:8px;align-items:flex-start;padding:8px;border:1px solid #e3e3ee;border-radius:6px;font-size:13px;cursor:pointer">'+
+         '<input type="checkbox" class="frdoc" data-no="'+x.no+'"'+checked+' style="margin-top:2px">'+
+         '<span>'+x.no+'. '+x.name+
+         (x.optional? '<br><span style="color:#8d6e00;font-size:11px">'+x.note+'</span>':'')+
+         '</span></label>';
+    });
+    h+='</div>';
+
+    h+='<h3>Contract</h3><div class="grid">'+
+       '<div class="f"><label>Contract signed?</label><select id="frSigned">'+
+         '<option value="">—</option>'+
+         '<option value="Yes"'+(r.contract_signed==='Yes'?' selected':'')+'>Yes</option>'+
+         '<option value="No"'+(r.contract_signed==='No'?' selected':'')+'>No</option></select></div>'+
+       '<div class="f"><label>Date signed</label><input type="date" id="frSignedDate" value="'+(r.contract_signed_date||'')+'"></div>'+
+       '<div class="f"><label>Contract type now</label><select id="frType">'+
+         (d.contract_types||[]).map(function(t){
+           return '<option'+(t===d.contract_type?' selected':'')+'>'+t+'</option>'; }).join('')+
+       '</select></div>'+
+       '<div class="f"><label>If converted — note</label><input id="frConvNote" placeholder="e.g. moved to project-based, Aug 2026" value="'+esc(r.conversion_note||'')+'"></div>'+
+       '</div>';
+
+    if(d.renewal_applicable){
+      h+='<h3>Renewal</h3><p class="sub" style="margin:0 0 8px">Past 12 months of service, so a renewal should be on file.</p>'+
+         '<div class="grid">'+
+         '<div class="f"><label>Renewal signed?</label><select id="frRenewal">'+
+           '<option value="">—</option>'+
+           '<option value="Yes"'+(r.renewal_signed==='Yes'?' selected':'')+'>Yes</option>'+
+           '<option value="No"'+(r.renewal_signed==='No'?' selected':'')+'>No</option>'+
+           '<option value="Not applicable"'+(r.renewal_signed==='Not applicable'?' selected':'')+'>Not applicable</option></select></div>'+
+         '<div class="f"><label>Date signed</label><input type="date" id="frRenewalDate" value="'+(r.renewal_signed_date||'')+'"></div>'+
+         '</div>';
+    }
+  }
+  h+='<div class="f" style="margin-top:12px"><label>Notes</label><input id="frNotes" value="'+esc(r.notes||'')+'"></div>';
+  h+='<div class="bar"><button onclick="saveFileReview()">Save and next</button></div>';
+  el('frBody').innerHTML=h;
+}
+function saveFileReview(){
+  var docs={};
+  document.querySelectorAll('.frdoc').forEach(function(c){ if(c.checked) docs[c.dataset.no]=true; });
+  var p={employee_id:FRDATA.employee_id, docs:docs,
+         nda_signed: el('frNda') && el('frNda').value==='Yes',
+         nda_signed_date: el('frNdaDate')?el('frNdaDate').value:'',
+         vendor_confirmed: el('frVendor')? el('frVendor').checked : false,
+         contract_signed: el('frSigned') && el('frSigned').value==='Yes',
+         contract_signed_date: el('frSignedDate')?el('frSignedDate').value:'',
+         contract_type: el('frType')?el('frType').value:'',
+         conversion_note: el('frConvNote')?el('frConvNote').value:'',
+         renewal_signed: el('frRenewal')?el('frRenewal').value:'',
+         renewal_signed_date: el('frRenewalDate')?el('frRenewalDate').value:'',
+         notes: el('frNotes')?el('frNotes').value:''};
+  msg('frMsg','Saving…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('frMsg',res.msg,res.ok?'ok':'err');
+    if(res.ok){ el('frId').value=''; el('frId').focus(); el('frBody').innerHTML=''; loadFileProgress(); }
+  }).withFailureHandler(function(e){msg('frMsg',e.message,'err');}).saveFileReview(p);
+}
+
+// ===================== MEDICAL INSURANCE =====================
+function medAction(what){
+  var id=el('medId').value.trim(), note=el('medNote').value;
+  if(!id){ msg('medMsg','Enter an employee ID.','err'); return; }
+  var q = what==='enrol'
+    ? 'Send the enrolment to medical insurance for '+id+'?'
+    : 'Ask medical insurance to STOP cover for '+id+' and all their dependants?';
+  if(!confirm(q)) return;
+  msg('medMsg','Sending…','warn');
+  var fn = what==='enrol' ? 'medicalEnrol' : 'medicalRemove';
+  var runner=google.script.run.withSuccessHandler(function(res){
+    msg('medMsg',res.msg,res.ok?'ok':'err');
+    if(res.ok){ el('medId').value=''; el('medNote').value=''; loadMedicalOutstanding(); }
+  }).withFailureHandler(function(e){msg('medMsg',e.message,'err');});
+  if(what==='enrol') runner.medicalEnrol(id,note); else runner.medicalRemove(id,'',note);
+}
+function loadMedicalOutstanding(){
+  google.script.run.withSuccessHandler(function(rows){
+    if(!rows.length){ el('medOutstanding').innerHTML='<p class="sub" style="color:#2e7d32">Nobody is leaving with cover still running.</p>'; return; }
+    var h='<p class="sub" style="color:#c62828;font-weight:bold">'+rows.length+' leaver(s) still on cover</p>';
+    rows.forEach(function(r){
+      h+='<div class="qitem" style="cursor:default"><div>'+
+         '<div class="nm">'+r.name+' &middot; '+r.employee_id+'</div>'+
+         '<div class="meta">'+r.status+' &middot; last day '+r.last_working_day+
+         (r.days_since!==''? (' — '+r.days_since+' day(s) ago'):'')+'</div></div>'+
+         '<button class="ghost" style="padding:6px 12px" onclick="quickRemove(\''+r.employee_id+'\')">Stop cover</button></div>';
+    });
+    el('medOutstanding').innerHTML=h;
+  }).withFailureHandler(function(){}).medicalOutstanding();
+}
+function quickRemove(id){
+  if(!confirm('Stop medical cover for '+id+' and their dependants?')) return;
+  google.script.run.withSuccessHandler(function(res){
+    msg('medMsg',res.msg,res.ok?'ok':'err'); loadMedicalOutstanding();
+  }).withFailureHandler(function(e){msg('medMsg',e.message,'err');}).medicalRemove(id,'','');
+}
+
+// ---------- HR records a departure on someone's behalf ----------
+function showDep(which){
+  hide('hrDepResign'); hide('hrDepNoShow');
+  show(which==='resign'? 'hrDepResign':'hrDepNoShow');
+  if(which==='noshow') hrNsTypeChanged();
+}
+function hrSubmitResignation(){
+  var p={employee_id:el('hrRsId').value, proposed_last_day:el('hrRsDate').value,
+         reason:el('hrRsReason').value, on_behalf_note:el('hrRsNote').value};
+  if(!p.employee_id){ msg('hrDepMsg','Enter the employee ID.','err'); return; }
+  if(!p.proposed_last_day){ msg('hrDepMsg','Enter the proposed last working day.','err'); return; }
+  if(!confirm('Record this resignation? The employee will be emailed to confirm, and their managers will be asked to agree the date.')) return;
+  msg('hrDepMsg','Recording…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('hrDepMsg',res.msg,res.ok?'ok':'err');
+    if(res.ok){ el('hrRsId').value=''; el('hrRsDate').value=''; el('hrRsReason').value=''; el('hrRsNote').value=''; }
+  }).withFailureHandler(function(e){msg('hrDepMsg',e.message,'err');}).submitResignationFor(p);
+}
+
+function hrNsTypeChanged(){
+  var t=el('hrNsType').value;
+  el('hrNsDateLabel').textContent = t==='Drop out' ? 'Last day' : 'Absent since';
+  el('hrNsNote2').innerHTML = t==='Drop out'
+    ? 'They have told us they are leaving. Managers and HR notified, payment held pending clearance.'
+    : 'Nobody knows where they are. Recipients are asked to reply urgently if they know anything.';
+  if(!el('hrNsReason').options.length){
+    var o='<option value=""></option>';
+    (LISTS['leaving_reason']||[]).forEach(function(x){ o+='<option>'+x+'</option>'; });
+    el('hrNsReason').innerHTML=o;
+  }
+}
+function hrLookupNs(){
+  var id=el('hrNsId').value.trim();
+  if(!id){ el('hrNsWho').innerHTML=''; return; }
+  google.script.run.withSuccessHandler(function(r){
+    el('hrNsWho').innerHTML = r.found
+      ? ('<strong>'+r.name+'</strong><br>'+(r.job_title||'')+'<br>Status: '+r.status)
+      : ('<span style="color:#c62828">'+(r.msg||'Not found')+'</span>');
+  }).lookupEmployeeForNoShow(id);
+}
+function hrSubmitNoShow(){
+  var p={employee_id:el('hrNsId').value, absent_since:el('hrNsSince').value,
+         event_type:el('hrNsType').value, leaving_reason:el('hrNsReason').value,
+         reason_detail:el('hrNsDetail').value, note:el('hrNsExtra').value,
+         cc_list:el('hrNsCc').value};
+  if(!p.employee_id){ msg('hrDepMsg','Enter the employee ID.','err'); return; }
+  if(!p.absent_since){ msg('hrDepMsg','Enter the date.','err'); return; }
+  if(!confirm('Record this '+p.event_type.toLowerCase()+'? Their payment will be put on hold.')) return;
+  msg('hrDepMsg','Recording…','warn');
+  google.script.run.withSuccessHandler(function(res){
+    msg('hrDepMsg',res.msg,res.ok?'ok':'err');
+    if(res.ok){ el('hrNsId').value=''; el('hrNsSince').value=''; el('hrNsWho').innerHTML='';
+                el('hrNsDetail').value=''; el('hrNsExtra').value=''; el('hrNsCc').value=''; }
+  }).withFailureHandler(function(e){msg('hrDepMsg',e.message,'err');}).reportNoShow(p);
+}
+
+</script></body></html>
