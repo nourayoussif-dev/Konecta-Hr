@@ -69,9 +69,47 @@ function doGet(){
 function include(f){ return HtmlService.createHtmlOutputFromFile(f).getContent(); }
 
 // ================== HELPERS ==================
-function ss_(){ return SpreadsheetApp.openById(SHEET_ID); }
-function sheet_(n){ return ss_().getSheetByName(n); }
-function headers_(n){ return sheet_(n).getRange(1,1,1,sheet_(n).getLastColumn()).getValues()[0]; }
+//
+// PER-EXECUTION MEMO
+// Apps Script charges a round trip for every call into the Spreadsheet
+// service. ss_() and sheet_() were called 149 times across this file and
+// headers_() 43 times, each one re-opening the file or re-reading the header
+// row. Worse, headers_() called sheet_() twice on one line, so every header
+// read cost two openById plus two getSheetByName.
+//
+// This memo lives for one execution only. A new request, or a trigger firing,
+// starts with an empty one, so nothing is cached across users or across runs.
+//
+// Only truthy sheets are memoised: several functions call sheet_() on a tab
+// that does not exist yet and then create it (TAB_CONTRACTS, TAB_APPOINTMENTS),
+// and caching the miss would leave them permanently invisible.
+var _MEMO = { ss:null, sheets:{}, headers:{} };
+
+function ss_(){
+  if(!_MEMO.ss) _MEMO.ss = SpreadsheetApp.openById(SHEET_ID);
+  return _MEMO.ss;
+}
+function sheet_(n){
+  if(_MEMO.sheets[n]) return _MEMO.sheets[n];
+  var sh = ss_().getSheetByName(n);
+  if(sh) _MEMO.sheets[n] = sh;
+  return sh;
+}
+function headers_(n){
+  if(_MEMO.headers[n]) return _MEMO.headers[n];
+  var sh = sheet_(n);
+  if(!sh) return [];
+  var lastCol = sh.getLastColumn();
+  if(lastCol < 1) return [];
+  var h = sh.getRange(1,1,1,lastCol).getValues()[0];
+  _MEMO.headers[n] = h;
+  return h;
+}
+// Call if a column is added mid-execution. Data writes do not need this —
+// only the header row is memoised, not row content.
+function clearHeaderMemo_(n){
+  if(n) delete _MEMO.headers[n]; else _MEMO.headers = {};
+}
 function currentUser_(){
   // Under "Execute as: Me" within the same Workspace domain, getActiveUser() still returns the visitor.
   var e = Session.getActiveUser().getEmail();
@@ -2780,15 +2818,43 @@ function openClearance(employeeId, lastWorkingDay){
 
 function directManagerOf_(eid){ const s=employeeFieldsOf_(eid,['direct_manager']); return s.direct_manager||''; }
 function dottedManagerOf_(eid){ const s=employeeFieldsOf_(eid,['dotted_manager']); return s.dotted_manager||''; }
+/**
+ * A few fields for one employee.
+ *
+ * This used to call sh.getDataRange().getValues() — the ENTIRE employee table,
+ * every column of every row — to read two or three cells for one person. With
+ * 26 call sites, four of them inside loops (hrInviteToSign, hrPendingDependants,
+ * hrMovementReport, hrMarkSigning), that was the single most expensive pattern
+ * in the file: inviting 100 people to sign meant 100 full-table reads.
+ *
+ * Now it reads the employee_id column to locate the row, then that one row.
+ * Cells transferred go from rows x columns to rows + columns — at 2,000
+ * employees and ~80 columns, from ~160,000 to ~2,080 per call.
+ *
+ * Deliberately still reads live rather than memoising, so a caller that writes
+ * to EMPLOYEES and reads back in the same execution cannot see stale data.
+ */
 function employeeFieldsOf_(eid, fields){
-  if(!String(eid||'').trim()) return {};
-  const sh=sheet_(TAB.EMP), hdr=headers_(TAB.EMP), data=sh.getDataRange().getValues();
-  const ei=hdr.indexOf('employee_id'); const out={};
-  for(let r=1;r<data.length;r++){
-    if(String(data[r][ei]).trim()!==String(eid).trim()) continue;
-    fields.forEach(function(f){ const c=hdr.indexOf(f); out[f]= c===-1?'':fmt_(data[r][c]); });
-    break;
+  const want=String(eid||'').trim();
+  if(!want) return {};
+  const sh=sheet_(TAB.EMP), hdr=headers_(TAB.EMP);
+  const ei=hdr.indexOf('employee_id');
+  if(ei===-1) return {};
+  const lastRow=sh.getLastRow();
+  if(lastRow<2) return {};
+
+  // One narrow read of the ID column to find the row.
+  const ids=sh.getRange(2,ei+1,lastRow-1,1).getValues();
+  let found=-1;
+  for(let r=0;r<ids.length;r++){
+    if(String(ids[r][0]).trim()===want){ found=r+2; break; }
   }
+  const out={};
+  if(found===-1) return out;
+
+  // One read of just that employee's row.
+  const row=sh.getRange(found,1,1,hdr.length).getValues()[0];
+  fields.forEach(function(f){ const c=hdr.indexOf(f); out[f]= c===-1?'':fmt_(row[c]); });
   return out;
 }
 
