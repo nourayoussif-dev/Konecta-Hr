@@ -131,12 +131,44 @@ function grossUp(netPromised, taxableBefore, employeeSI, dedTaxable) {
 
 // ============ DAY COUNTS ====================================================
 
-/** Days of THIS month. Leaver: MIN(30, day of exit). Joiner: 31 - day of hire. */
+/**
+ * Days of THIS month, on the Egyptian 30-day month convention.
+ *
+ *   full month  -> 30, even in a 31-day calendar month. The 31st is not a
+ *                  payroll day for anyone, so a hire on the 31st is 0 days
+ *                  here and a full 30 next month. That is deliberate.
+ *   leaver      -> MIN(30, day of exit)
+ *   joiner      -> 31 - day of hire   (hired on the 15th = 15th..30th = 16 days)
+ *
+ * FIXED 26/08/2026 — two cases the earlier version got wrong:
+ *
+ *   BOTH in the same month. The leaver branch was tested first and returned
+ *   MIN(30, exit day), counting from the 1st — as though the person had been
+ *   employed all along. Hired on the 10th and exited on the 20th paid 20 days
+ *   for 11 worked. That is the exact shape of a no-show or a drop-out, which
+ *   is why the app has a NO_SHOW module, and it was caught only when someone
+ *   remembered to run holdPaymentFor_.
+ *
+ *   HIRE AFTER THIS MONTH. A hire date past monthEnd fell through every
+ *   branch to `return 30`, paying a full month to somebody who had not
+ *   started. Running payroll early, or a pushed-back start date, both reach
+ *   this.
+ */
 function daysThisMonth(hireDate, exitDate, monthStart, monthEnd) {
+  // Already gone, or not yet started: nothing to pay.
   if (exitDate && exitDate < monthStart) return 0;
-  if (exitDate && exitDate <= monthEnd) return Math.min(30, exitDate.getDate());
-  if (hireDate && hireDate >= monthStart && hireDate <= monthEnd)
-    return 31 - hireDate.getDate();
+  if (hireDate && hireDate > monthEnd)   return 0;
+
+  var joins  = hireDate && hireDate >= monthStart && hireDate <= monthEnd;
+  var leaves = exitDate && exitDate <= monthEnd;   // exit >= monthStart, checked above
+
+  // Employed for only part of the month at both ends: pay the days between,
+  // inclusive of the hire date itself.
+  if (joins && leaves) {
+    return Math.max(0, Math.min(30, exitDate.getDate()) - hireDate.getDate() + 1);
+  }
+  if (leaves) return Math.min(30, exitDate.getDate());
+  if (joins)  return 31 - hireDate.getDate();
   return 30;
 }
 
@@ -188,6 +220,22 @@ function wasPaidInPeriod(employeeId, period) {
  *   dedTaxable, otherDeductions, hours135, hours170, publicHolidayDays, weekendDays
  */
 function calculateEmployee(emp, monthStart, monthEnd) {
+  // Refuse a record we cannot price, rather than paying out NaN.
+  //
+  // A blank or non-numeric basic_salary used to propagate NaN through
+  // worthBasic, totalSalary, incomeTax and netSalary without throwing, so the
+  // employee received a payslip reading NaN and the run reported success.
+  // Stopping here forces the record to be fixed before anyone is paid.
+  if (typeof emp.basic !== 'number' || !isFinite(emp.basic)) {
+    throw new Error('Payroll stopped: ' + (emp.id || 'an employee') +
+      ' has no usable basic salary (' + JSON.stringify(emp.basic) + '). ' +
+      'Fix basic_salary on the EMPLOYEES tab and run again.');
+  }
+  if (emp.basic < 0) {
+    throw new Error('Payroll stopped: ' + (emp.id || 'an employee') +
+      ' has a negative basic salary (' + emp.basic + ').');
+  }
+
   // arrearsDays must come from arrearsDays(), which checks the previous
   // month's payroll. Never default it to zero without looking.
   var totalDays = (emp.workingDays || 0) + (emp.arrearsDays || 0);

@@ -185,10 +185,16 @@ The runner reports two kinds of result:
   changed, because altering payroll maths needs a human decision. These are
   printed in full at the end of every run and never fail the build.
 
-Three items are flagged today: a hire on the 31st is paid for zero days and
-never recovers it; someone who joins and leaves in the same month is paid from
-the 1st rather than from their hire date; and a blank `basic_salary` produces
-`NaN` across the payslip instead of stopping the run.
+Nothing is flagged today. Three items were, and two turned out to be real
+bugs, now fixed and covered by regression tests: someone joining and leaving in
+the same month was paid from the 1st rather than from their hire date, and a
+hire dated after the payroll month was paid a full 30 days. The third — a hire
+on the 31st being paid zero days — is *correct*: Egypt runs a 30-day month
+convention, so nobody is paid for a 31st.
+
+The engine also now refuses a record it cannot price. A blank or non-numeric
+`basic_salary` used to propagate `NaN` through the whole payslip while the run
+reported success; it now stops with the employee's ID in the message.
 
 ---
 

@@ -205,38 +205,38 @@ describe('Day counts — joiners, leavers and arrears', () => {
     eq(g.arrearsDays(null, D(2025, 12, 1), D(2025, 12, 31), false), 0);
   });
 
-  review('A hire on the 31st is paid for zero days, permanently',
-`  g.daysThisMonth(hired 31 Jan) === 0        because 31 - 31 = 0
-  g.arrearsDays(hired 31 Jan, ...) === 0     same formula, so next month
-                                             does not recover the day either.
+  test('the 30-day convention: a full month is 30 days and the 31st is nobody\'s payroll day', () => {
+    // Not a bug, and deliberately left alone: nobody is paid for a 31st, so a
+    // hire on the 31st is 0 days here and a full 30 the following month.
+    // This is what produced the 100% Worth Basic match against the provider.
+    eq(g.daysThisMonth(D(2020, 1, 1),  null, JAN_START, JAN_END), 30, 'full 31-day month');
+    eq(g.daysThisMonth(D(2026, 1, 31), null, JAN_START, JAN_END),  0, 'hired on the 31st');
+    eq(g.arrearsDays(D(2025, 12, 31), D(2025, 12, 1), D(2025, 12, 31), false), 0);
+  });
 
-  Someone hired on the 31st of Jan/Mar/May/Jul/Aug/Oct/Dec is never paid for
-  that day. It is one day per affected hire, but it is silently lost rather
-  than deferred.
+  test('someone who joins AND leaves in the same month is paid only the days employed', () => {
+    // Regression: the leaver branch used to win and count from the 1st,
+    // paying 20 days for 11 worked. This is the no-show / drop-out shape.
+    eq(g.daysThisMonth(D(2026, 1, 10), D(2026, 1, 20), JAN_START, JAN_END), 11,
+       'hired 10th, exited 20th');
+    eq(g.daysThisMonth(D(2026, 1, 1),  D(2026, 1, 30), JAN_START, JAN_END), 30,
+       'hired 1st, exited 30th is still a full month');
+    eq(g.daysThisMonth(D(2026, 1, 1),  D(2026, 1, 31), JAN_START, JAN_END), 30,
+       'exit on the 31st is capped at 30');
+    eq(g.daysThisMonth(D(2026, 1, 10), D(2026, 1, 31), JAN_START, JAN_END), 21,
+       'hired 10th, exited 31st = 10th..30th');
+    eq(g.daysThisMonth(D(2026, 1, 20), D(2026, 1, 20), JAN_START, JAN_END), 1,
+       'hired and exited the same day still earns that day');
+    eq(g.daysThisMonth(D(2026, 1, 25), D(2026, 1, 10), JAN_START, JAN_END), 0,
+       'an exit before the hire date cannot go negative');
+  });
 
-  payrollengine.gs:135-141 (daysThisMonth) and :159-165 (arrearsDays)
-
-  Likely fix: 31 - day + 1, i.e. count the hire date itself as worked. That
-  would also make "hired on the 1st" 31 days, so it should probably be
-  Math.min(30, 31 - day + 1). Confirm against how the provider counts before
-  changing anything.`);
-
-  review('A joiner who also leaves in the same month is overpaid',
-`  g.daysThisMonth(hired 10 Jan, exit 20 Jan) === 20
-  but the employee actually worked 11 days (10th to 20th inclusive).
-
-  The leaver branch is tested first and returns MIN(30, exit day), counting
-  from the 1st of the month — ignoring that the person was not employed for
-  the first nine days. That is a 9-day overpayment in this example.
-
-  This is not hypothetical: the app has a whole NO_SHOW module for people who
-  join and immediately drop out, which is exactly this shape. It is caught
-  today only if HR remembers to run holdPaymentFor_.
-
-  payrollengine.gs:135-141
-
-  Likely fix: when hire and exit both fall inside the month, pay
-  exit.getDate() - hire.getDate() + 1.`);
+  test('a hire dated after this month is paid nothing', () => {
+    // Regression: a future hire fell through every branch to `return 30`,
+    // paying a full month to someone who had not started.
+    eq(g.daysThisMonth(D(2026, 2, 15), null, JAN_START, JAN_END), 0);
+    eq(g.daysThisMonth(D(2026, 2, 1),  null, JAN_START, JAN_END), 0);
+  });
 });
 
 // ─────────────────────────────────────────────────────── add-on pricing ──
@@ -331,16 +331,37 @@ describe('calculateEmployee — the components must reconcile', () => {
     });
   });
 
-  review('A missing basic salary yields NaN rather than a refusal',
-`  calculateEmployee({ basic: undefined }) propagates NaN through worthBasic,
-  totalSalary, incomeTax and netSalary. Nothing throws.
+  test('a missing or unusable basic salary stops the run instead of paying NaN', () => {
+    // Regression: NaN used to propagate through worthBasic, totalSalary,
+    // incomeTax and netSalary without throwing, so the employee got a payslip
+    // reading NaN and the run reported success.
+    const bad = v => () => g.calculateEmployee(
+      { id: 'EG777', basic: v, workingDays: 30, hireDate: D(2020, 1, 1) },
+      JAN_START, JAN_END);
+    throws(bad(undefined), 'undefined basic');
+    throws(bad(null),      'null basic');
+    throws(bad(''),        'blank cell');
+    throws(bad('12000'),   'a number stored as text');
+    throws(bad(NaN),       'NaN basic');
+    throws(bad(-500),      'negative basic');
+  });
 
-  A blank basic_salary cell in EMPLOYEES therefore produces a payslip full of
-  NaN rather than a hard failure that stops the run. payrollchecks.gs may
-  catch it beforehand, but the engine itself does not defend.
+  test('the refusal names the employee, so the record can be found and fixed', () => {
+    try {
+      g.calculateEmployee({ id: 'EG0421', workingDays: 30, hireDate: D(2020, 1, 1) },
+                          JAN_START, JAN_END);
+      throw new Error('expected a throw');
+    } catch (e) {
+      if (!/EG0421/.test(e.message)) throw new Error(`message lacks the id: ${e.message}`);
+      if (!/basic_salary/.test(e.message)) throw new Error(`message lacks the field: ${e.message}`);
+    }
+  });
 
-  payrollengine.gs:190-224 (calculateEmployee)
-
-  Likely fix: throw on a non-finite basic, so a bad record stops the payroll
-  run instead of silently producing a broken payslip.`);
+  test('a zero basic salary is allowed — it is a real case, unlike a blank one', () => {
+    const r = g.calculateEmployee(
+      { id: 'EG888', basic: 0, workingDays: 30, hireDate: D(2020, 1, 1) },
+      JAN_START, JAN_END);
+    eq(r.worthBasic, 0);
+    eq(isNaN(r.netSalary), false);
+  });
 });

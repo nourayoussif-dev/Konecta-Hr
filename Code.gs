@@ -11,7 +11,14 @@
  *   Gate 2  offer     : hire_date, job_title, function, contract_type, direct_manager, basic_salary
  *   Gate 3  payment   : insurance_number, bank_name, account_number, iban, bank_verified
  *
- * Deploy: Execute as = User accessing.  Access = Konecta domain.
+ * Deploy: Execute as = ME (the deploying user).  Access = Konecta domain.
+ *
+ *   "Execute as: Me" is load-bearing, not a preference. The script reaches the
+ *   spreadsheet on its own authority, so employees never need access to a
+ *   Sheet holding every salary, national ID and bank account in the company.
+ *   Switching to "User accessing" would require granting all of them exactly
+ *   that, and they could then open the Sheet directly and bypass every check
+ *   in this file. See appsscript.json.
  */
 
 // ================== CONFIG ==================
