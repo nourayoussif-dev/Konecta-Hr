@@ -1,0 +1,16 @@
+# clasp — the local project link holds your scriptId; keep it out of the repo
+.clasp.json
+
+# clasp auth credentials — NEVER commit these
+.clasprc.json
+
+# editor / OS noise
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# node, if you add the local test harness
+node_modules/
+coverage/
