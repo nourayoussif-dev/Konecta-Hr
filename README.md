@@ -164,6 +164,34 @@ law changes, historic recalculation will silently use the new figures.
 
 ---
 
+## Tests
+
+The payroll engine handles money and had no regression protection. `tests/`
+runs its logic offline — no Google account, no network, no dependencies:
+
+```bash
+node tests/run.js
+```
+
+`tests/harness.js` loads `.gs` files into a sandbox that reproduces Apps
+Script's single shared global scope and stubs the Google services. Anything
+that genuinely needs a spreadsheet is out of scope by design; the point is to
+pin down the arithmetic.
+
+The runner reports two kinds of result:
+
+- **`✓` / `✗`** — assertions. A failure is a regression and exits non-zero.
+- **`⚠` flagged for review** — behaviour that looks wrong but has *not* been
+  changed, because altering payroll maths needs a human decision. These are
+  printed in full at the end of every run and never fail the build.
+
+Three items are flagged today: a hire on the 31st is paid for zero days and
+never recovers it; someone who joins and leaves in the same month is paid from
+the 1st rather than from their hire date; and a blank `basic_salary` produces
+`NaN` across the payslip instead of stopping the run.
+
+---
+
 ## Conventions
 
 - A trailing underscore means private/server-internal: `empData_`, `logChange_`.
