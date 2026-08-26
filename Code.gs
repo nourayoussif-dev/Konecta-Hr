@@ -207,6 +207,90 @@ function firstFreeRow_(sh,hdr){
   }
   return sh.getMaxRows()+1;
 }
+// ================================================================
+// ROW IDENTITY GUARD
+//
+// The row number a browser sends can be stale: HR sorts or filters the
+// sheet while an editor is open, rows shift, and a write aimed at row N
+// lands on whoever occupies row N now. For salary, bank and status writes
+// that is silent corruption of the wrong person's record.
+//
+// So no client-facing function trusts a bare row any more. The client
+// sends back the identity it was given when it fetched the list (an
+// employee_id, request_id, clearance_id, ...) and the write goes through
+// here first:
+//
+//   still in place -> the same row, one cheap read to confirm.
+//   moved          -> the ONE row that matches every key, found by a
+//                     narrow column scan. The caller gets the new row.
+//   zero or many   -> refuse with a message a human can act on. Nothing
+//                     is written.
+//
+// Comparison uses fmt_ on the cell, because fmt_ is what built the value
+// the client is holding — so dates compare as yyyy-MM-dd, not by whatever
+// Date.toString happens to produce.
+// ================================================================
+function guardRow_(sh, hdr, row, keys, firstDataRow){
+  firstDataRow = firstDataRow || 2;
+  const fields = Object.keys(keys || {});
+  if(!fields.length) throw new Error('guardRow_: no identity given.');
+  const want = {};
+  for (var k = 0; k < fields.length; k++){
+    const f = fields[k];
+    const v = String(keys[f] == null ? '' : keys[f]).trim();
+    // A blank key is a page from before this guard existed, or a renderer
+    // that failed to pass one. Refusing beats writing to an unverified row.
+    if(!v) throw new Error('This page is out of date. Refresh and try again.');
+    if(hdr.indexOf(f) === -1)
+      throw new Error('Column "' + f + '" is missing from ' + sh.getName() +
+                      ' — it was renamed or deleted. Restore it before saving.');
+    want[f] = v;
+  }
+  const last = sh.getLastRow();
+  const matchesAt = function(r){
+    return fields.every(function(f){
+      return fmt_(sh.getRange(r, hdr.indexOf(f) + 1).getValue()).trim() === want[f];
+    });
+  };
+  row = parseInt(row, 10);
+  if(row >= firstDataRow && row <= last && matchesAt(row)) return row;
+
+  // The sheet changed under the client. Re-find by identity: one narrow
+  // column read per key field, then intersect the matching rows.
+  var hits = null;
+  if(last >= firstDataRow){
+    for (var k2 = 0; k2 < fields.length; k2++){
+      const f2 = fields[k2];
+      const col = sh.getRange(firstDataRow, hdr.indexOf(f2) + 1,
+                              last - firstDataRow + 1, 1).getValues();
+      const these = {};
+      for (var r2 = 0; r2 < col.length; r2++){
+        if(fmt_(col[r2][0]).trim() === want[f2]) these[r2 + firstDataRow] = true;
+      }
+      if(hits === null) hits = these;
+      else Object.keys(hits).forEach(function(r3){ if(!these[r3]) delete hits[r3]; });
+    }
+  }
+  const found = Object.keys(hits || {});
+  if(found.length === 1) return parseInt(found[0], 10);
+
+  const what = fields.map(function(f){ return f + ' ' + want[f]; }).join(', ');
+  if(found.length > 1)
+    throw new Error('More than one row matches ' + what +
+                    ' — there is a duplicate in ' + sh.getName() + '. Fix it before saving.');
+  throw new Error('Could not find the record (' + what + '). It may have been ' +
+                  'changed or removed — refresh and try again.');
+}
+
+// EMPLOYEES convenience: before the ID is issued a record is identified by
+// its national ID, afterwards by the employee ID. EG-prefix tells them apart.
+function guardEmpRow_(sh, hdr, row, key){
+  const k = String(key == null ? '' : key).trim();
+  const keys = {};
+  keys[k.indexOf(ID_PREFIX) === 0 ? 'employee_id' : 'national_id'] = k;
+  return guardRow_(sh, hdr, row, keys);
+}
+
 function getBootstrap(){
   const role=getRole();
   const out={role:role};
@@ -504,11 +588,12 @@ function hrGetPending(){
 }
 
 // HR confirms the physical ID card matches, and issues the employee ID
-function hrVerifyAndIssue(row){
+function hrVerifyAndIssue(row, key){
   if(!isHR_()) throw new Error('HR only.');
   const lock=LockService.getScriptLock(); lock.waitLock(30000);
   try{
     const sh=sheet_(TAB.EMP),hdr=headers_(TAB.EMP);
+    row=guardRow_(sh,hdr,row,{national_id:key});
     const get=function(f){ return sh.getRange(row,hdr.indexOf(f)+1).getValue(); };
     const set=function(f,v){ const c=hdr.indexOf(f); if(c!==-1) sh.getRange(row,c+1).setValue(v); };
 
@@ -541,11 +626,12 @@ function hrVerifyAndIssue(row){
 }
 
 // HR saves offer fields
-function hrSaveOffer(row,payload){
+function hrSaveOffer(row,payload,key){
   if(!isHR_()) throw new Error('HR only.');
   const lock=LockService.getScriptLock(); lock.waitLock(20000);
   try{
     const sh=sheet_(TAB.EMP),hdr=headers_(TAB.EMP),changes=[];
+    row=guardEmpRow_(sh,hdr,row,key);
     HR_OFFER_FIELDS.forEach(function(f){
       if(payload[f]===undefined) return;
       const c=hdr.indexOf(f)+1; if(c===0) return;
@@ -587,9 +673,10 @@ function hrGetBankPending(){
   return out;
 }
 
-function hrVerifyBank(row, decision){
+function hrVerifyBank(row, decision, key){
   if(!isHR_()) throw new Error('HR only.');
   const sh=sheet_(TAB.EMP),hdr=headers_(TAB.EMP);
+  row=guardRow_(sh,hdr,row,{employee_id:key});
   const val = decision==='reject' ? 'Rejected' : 'Verified';
   const old = fmt_(sh.getRange(row,hdr.indexOf('bank_verified')+1).getValue());
   sh.getRange(row,hdr.indexOf('bank_verified')+1).setValue(val);
@@ -653,6 +740,7 @@ function hrGetTaskList(){
 
     if(!reasons.length) return;
     out.push({row:rec.row, employee_id:fmt_(v[cEid]), full_name_en:fmt_(v[cNm]),
+              national_id:fmt_(v[cNid]),
               record_status:status, missingCount:missing.length,
               missing:missing, reasons:reasons});
   });
@@ -675,14 +763,16 @@ function hrSearchEmployees(term){
     const hay=(String(v[cEid])+' '+String(v[cNm])+' '+String(v[cNid])).toLowerCase();
     if(hay.indexOf(term)===-1) continue;
     out.push({row:E.rows[i].row, employee_id:fmt_(v[cEid]), full_name_en:fmt_(v[cNm]),
+              national_id:fmt_(v[cNid]),
               record_status:fmt_(v[cSt]), completeness:fmt_(v[cComp])});
   }
   return out;
 }
 
-function hrGetRecord(row){
+function hrGetRecord(row, key){
   if(!isHR_()) throw new Error('HR only.');
   const sh=sheet_(TAB.EMP), hdr=headers_(TAB.EMP);
+  row=guardEmpRow_(sh,hdr,row,key);
   const vals=sh.getRange(row,1,1,hdr.length).getValues()[0];
   const rec={}; hdr.forEach(function(h,c){ rec[h]=fmt_(vals[c]); });
   rec._row=row;
@@ -695,11 +785,12 @@ var HR_LOCKED = ['employee_id','completeness_%','blocking_gaps','chase_gaps','re
   'company_type_code','contract_type_code','contract_time_code','exit_type_code',
   'created_at','created_by','updated_at','updated_by','insurance_wage'];
 
-function hrSaveRecord(row, payload){
+function hrSaveRecord(row, payload, key){
   if(!isHR_()) throw new Error('HR only.');
   const lock=LockService.getScriptLock(); lock.waitLock(20000);
   try{
     const sh=sheet_(TAB.EMP), hdr=headers_(TAB.EMP);
+    row=guardEmpRow_(sh,hdr,row,key);
     const eid=sh.getRange(row,hdr.indexOf('employee_id')+1).getValue();
     const nid=sh.getRange(row,hdr.indexOf('national_id')+1).getValue();
     const changes=[];
@@ -737,11 +828,12 @@ function itGetQueue(){
   return out;
 }
 
-function itSetEmail(row,email){
+function itSetEmail(row,email,key){
   if(!isIT_()&&!isHR_()) throw new Error('IT only.');
   email=String(email).trim().toLowerCase();
   if(!/^[^@]+@konecta\.com$/.test(email)) return {ok:false,msg:'Must be a @konecta.com address.'};
   const sh=sheet_(TAB.EMP),hdr=headers_(TAB.EMP);
+  row=guardRow_(sh,hdr,row,{employee_id:key});
   sh.getRange(row,hdr.indexOf('konecta_email')+1).setValue(email);
   stampUpdate_(sh,hdr,row);
   const eid=sh.getRange(row,hdr.indexOf('employee_id')+1).getValue();
@@ -849,11 +941,12 @@ function hrGetIntake(){
 }
 
 // HR approves an intake row -> creates the EMPLOYEES record + issues the Employee ID
-function hrApproveIntake(intakeRow){
+function hrApproveIntake(intakeRow, key){
   if(!isHR_()) throw new Error('HR only.');
   const lock=LockService.getScriptLock(); lock.waitLock(30000);
   try{
     const ish=sheet_(TAB_INTAKE), ihdr=intakeHeaders_();
+    intakeRow=guardRow_(ish,ihdr,intakeRow,{national_id:key},5);
     const iget=function(f){ return fmt_(ish.getRange(intakeRow,ihdr.indexOf(f)+1).getValue()); };
     const nid=iget('national_id');
     if(!nid) throw new Error('No national ID on this intake row.');
@@ -901,9 +994,10 @@ function hrApproveIntake(intakeRow){
   } finally { lock.releaseLock(); }
 }
 
-function hrRejectIntake(intakeRow,reason){
+function hrRejectIntake(intakeRow,reason,key){
   if(!isHR_()) throw new Error('HR only.');
   const ish=sheet_(TAB_INTAKE), ihdr=intakeHeaders_();
+  intakeRow=guardRow_(ish,ihdr,intakeRow,{national_id:key},5);
   const set=function(f,x){ const c=ihdr.indexOf(f); if(c!==-1) ish.getRange(intakeRow,c+1).setValue(x); };
   set('review_status','Rejected'); set('approved_by',currentUser_()); set('approved_at',new Date());
   set('notes',reason||'');
@@ -933,10 +1027,11 @@ function getMyTeam(){
   return {isManager:true, myId:identity.id, team:team};
 }
 
-function getTeamMemberCard(row){
+function getTeamMemberCard(row, key){
   const identity=getManagerIdentity_();
   if(!identity) throw new Error('Not authorised.');
   const sh=sheet_(TAB.EMP), hdr=headers_(TAB.EMP);
+  row=guardRow_(sh,hdr,row,{employee_id:key});
   const vals=sh.getRange(row,1,1,hdr.length).getValues()[0];
   const get=function(f){ const c=hdr.indexOf(f); return c===-1?'':fmt_(vals[c]); };
   // authorisation: this person must report to the caller
@@ -1007,12 +1102,13 @@ function recalcNLevels(){
 // Fields a DIRECT MANAGER may edit on their own reports. Nothing else.
 const MANAGER_EDITABLE = ['grade','gcm'];
 
-function managerSaveTeamMember(row, payload){
+function managerSaveTeamMember(row, payload, key){
   const identity=getManagerIdentity_();
   if(!identity) throw new Error('Not authorised.');
   const lock=LockService.getScriptLock(); lock.waitLock(20000);
   try{
     const sh=sheet_(TAB.EMP), hdr=headers_(TAB.EMP);
+    row=guardRow_(sh,hdr,row,{employee_id:key});
     const get=function(f){ const c=hdr.indexOf(f); return c===-1?'':fmt_(sh.getRange(row,c+1).getValue()); };
     // must be their own direct report
     if(String(get('direct_manager')).trim()!==identity.id) throw new Error('Not your report.');
@@ -1559,9 +1655,10 @@ function reportBalanceIssue(comment){
 }
 
 // HR: the full leave picture for one employee (for the editor panel)
-function hrGetLeaveBalance(row){
+function hrGetLeaveBalance(row, key){
   if(!isHR_()) throw new Error('HR only.');
   const sh=sheet_(TAB.EMP), hdr=headers_(TAB.EMP);
+  row=guardRow_(sh,hdr,row,{employee_id:key});
   const get=function(f){ const c=hdr.indexOf(f); return c===-1?'':fmt_(sh.getRange(row,c+1).getValue()); };
   const eid=get('employee_id');
   const rec={leave_entitlement:get('leave_entitlement'), has_disability:get('has_disability'),
@@ -1706,12 +1803,13 @@ function getLeaveApprovals(){
 }
 
 // Manager decision. days = how many they allow (may be fewer, never more).
-function decideLeave(row, decision, days, comment, keptDates){
+function decideLeave(row, decision, days, comment, keptDates, key){
   const lock=LockService.getScriptLock(); lock.waitLock(20000);
   try{
     const acting=actingFor_();
     if(!acting.length) throw new Error('You are not an approver.');
     const sh=sheet_(TAB_LEAVE), hdr=leaveHdr_();
+    row=guardRow_(sh,hdr,row,{request_id:key});
     const i=function(f){return hdr.indexOf(f);};
     const get=function(f){ const c=i(f); return c===-1?'':fmt_(sh.getRange(row,c+1).getValue()); };
     const set=function(f,v){ const c=i(f); if(c!==-1) sh.getRange(row,c+1).setValue(v); };
@@ -1771,11 +1869,12 @@ function decideLeave(row, decision, days, comment, keptDates){
 }
 
 // HR validates entitled leave once the document is in hand
-function hrValidateLeave(row, decision, days, comment){
+function hrValidateLeave(row, decision, days, comment, key){
   if(!isHR_()) throw new Error('HR only.');
   const lock=LockService.getScriptLock(); lock.waitLock(20000);
   try{
     const sh=sheet_(TAB_LEAVE), hdr=leaveHdr_();
+    row=guardRow_(sh,hdr,row,{request_id:key});
     const i=function(f){return hdr.indexOf(f);};
     const get=function(f){ const c=i(f); return c===-1?'':fmt_(sh.getRange(row,c+1).getValue()); };
     const set=function(f,v){ const c=i(f); if(c!==-1) sh.getRange(row,c+1).setValue(v); };
@@ -1923,11 +2022,12 @@ function setDelegate(delegateEmail, fromDate, toDate, note){
   return {ok:true, msg:'Delegation set. '+email+' has been notified.'};
 }
 
-function endDelegate(row){
+function endDelegate(row, key){
   const identity=getManagerIdentity_();
   if(!identity) throw new Error('Not authorised.');
   const sh=sheet_(TAB_DELEGATES);
   const hdr=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0];
+  row=guardRow_(sh,hdr,row,{manager_id:identity.id, delegate_email:key, active:'Yes'});
   const mi=hdr.indexOf('manager_id');
   if(String(sh.getRange(row,mi+1).getValue()).trim()!==identity.id) throw new Error('That is not your delegation.');
   const ai=hdr.indexOf('active');
@@ -2217,9 +2317,10 @@ function employeeSnapshot_(id){
 }
 
 // ---------- HR: set an entitlement override ----------
-function hrSetEntitlement(row, days, reason){
+function hrSetEntitlement(row, days, reason, key){
   if(!isHR_()) throw new Error('HR only.');
   const sh=sheet_(TAB.EMP), hdr=headers_(TAB.EMP);
+  row=guardRow_(sh,hdr,row,{employee_id:key});
   const c=hdr.indexOf('leave_entitlement');
   if(c===-1) throw new Error('Column leave_entitlement not found.');
   const old=fmt_(sh.getRange(row,c+1).getValue());
@@ -2359,12 +2460,13 @@ function submitResignation(p){
 }
 
 // A manager either accepts the date on the table, or proposes a different one.
-function decideResignation(row, decision, proposedDate, comment){
+function decideResignation(row, decision, proposedDate, comment, key){
   const lock=LockService.getScriptLock(); lock.waitLock(20000);
   try{
     const acting=actingFor_();
     if(!acting.length) throw new Error('You are not an approver.');
     const sh=sheet_(TAB_RESIGN), hdr=resignHdr_();
+    row=guardRow_(sh,hdr,row,{resignation_id:key});
     const i=function(f){return hdr.indexOf(f);};
     const get=function(f){ const c=i(f); return c===-1?'':fmt_(sh.getRange(row,c+1).getValue()); };
     const set=function(f,v){ const c=i(f); if(c!==-1) sh.getRange(row,c+1).setValue(v); };
@@ -2488,10 +2590,11 @@ function withdrawResignation(comment){
   } finally { lock.releaseLock(); }
 }
 
-function decideWithdrawal(row, accept, comment){
+function decideWithdrawal(row, accept, comment, key){
   const acting=actingFor_();
   if(!acting.length) throw new Error('Not authorised.');
   const sh=sheet_(TAB_RESIGN), hdr=resignHdr_();
+  row=guardRow_(sh,hdr,row,{resignation_id:key});
   const i=function(f){return hdr.indexOf(f);};
   const g=function(f){ const c=i(f); return c===-1?'':fmt_(sh.getRange(row,c+1).getValue()); };
   const set=function(f,v){ const c=i(f); if(c!==-1) sh.getRange(row,c+1).setValue(v); };
@@ -2859,10 +2962,11 @@ function employeeFieldsOf_(eid, fields){
 }
 
 // ---------- stage 1: handover ----------
-function confirmHandover(row, note){
+function confirmHandover(row, note, key){
   const acting=actingFor_();
   if(!acting.length) throw new Error('Only a manager can confirm handover.');
   const sh=sheet_(TAB_CLEAR), hdr=clearHdr_();
+  row=guardRow_(sh,hdr,row,{clearance_id:key});
   const g=function(f){ const c=hdr.indexOf(f); return c===-1?'':fmt_(sh.getRange(row,c+1).getValue()); };
   const set=function(f,v){ const c=hdr.indexOf(f); if(c!==-1) sh.getRange(row,c+1).setValue(v); };
   const eid=g('employee_id');
@@ -2897,8 +3001,9 @@ function confirmHandover(row, note){
 }
 
 // ---------- stage 2: IT and Facilities ----------
-function submitClearanceItems(row, dept, items, amounts, note, loans){
+function submitClearanceItems(row, dept, items, amounts, note, loans, key){
   const sh=sheet_(TAB_CLEAR), hdr=clearHdr_();
+  row=guardRow_(sh,hdr,row,{clearance_id:key});
   const g=function(f){ const c=hdr.indexOf(f); return c===-1?'':fmt_(sh.getRange(row,c+1).getValue()); };
   const set=function(f,v){ const c=hdr.indexOf(f); if(c!==-1) sh.getRange(row,c+1).setValue(v); };
 
@@ -2934,9 +3039,10 @@ function submitClearanceItems(row, dept, items, amounts, note, loans){
 }
 
 // ---------- stage 3: HR final gate ----------
-function hrCompleteClearance(row, items, note){
+function hrCompleteClearance(row, items, note, key){
   if(!isHR_()) throw new Error('HR only.');
   const sh=sheet_(TAB_CLEAR), hdr=clearHdr_();
+  row=guardRow_(sh,hdr,row,{clearance_id:key});
   const g=function(f){ const c=hdr.indexOf(f); return c===-1?'':fmt_(sh.getRange(row,c+1).getValue()); };
   const set=function(f,v){ const c=hdr.indexOf(f); if(c!==-1) sh.getRange(row,c+1).setValue(v); };
   if(g('it_status')!=='Cleared' || g('fac_status')!=='Cleared'){
@@ -3236,9 +3342,10 @@ function hrGetNoShows(){
 }
 
 // HR resolves it: the person came back, or it becomes a termination.
-function hrResolveNoShow(row, outcome, note){
+function hrResolveNoShow(row, outcome, note, key){
   if(!isHR_()) throw new Error('HR only.');
   const sh=sheet_(TAB_NOSHOW), hdr=noshowHdr_();
+  row=guardRow_(sh,hdr,row,{noshow_id:key});
   const g=function(f){ const c=hdr.indexOf(f); return c===-1?'':fmt_(sh.getRange(row,c+1).getValue()); };
   const set=function(f,v){ const c=hdr.indexOf(f); if(c!==-1) sh.getRange(row,c+1).setValue(v); };
   const eid=g('employee_id');
@@ -3556,11 +3663,12 @@ function initiateTermination(p){
 }
 
 // HR approves or rejects a violation raised by a manager
-function hrDecideTermination(row, approve, note){
+function hrDecideTermination(row, approve, note, key){
   if(!isHR_()) throw new Error('HR only.');
   const lock=LockService.getScriptLock(); lock.waitLock(20000);
   try{
     const sh=sheet_(TAB_TERM), hdr=termHdr_();
+    row=guardRow_(sh,hdr,row,{termination_id:key});
     const g=function(f){ const c=hdr.indexOf(f); return c===-1?'':fmt_(sh.getRange(row,c+1).getValue()); };
     const set=function(f,v){ const c=hdr.indexOf(f); if(c!==-1) sh.getRange(row,c+1).setValue(v); };
     if(g('hr_status')!=='Pending') throw new Error('This is not awaiting a decision.');
@@ -4827,10 +4935,11 @@ function saveMyDependants(list){
 
 // An employee asking to remove someone the insurer already covers.
 // Cover has to be stopped with the insurer, so this is a request, not an act.
-function requestDependantRemoval(row, reason){
+function requestDependantRemoval(row, reason, key){
   const me=getMyRecord();
   if(!me.found) throw new Error('No record found for your account.');
   const sh=sheet_(TAB_DEPENDANTS), hdr=depHdr_();
+  row=guardRow_(sh,hdr,row,{employee_id:me.readonly.employee_id, name:key});
   const g=function(f){ const c=hdr.indexOf(f); return c===-1?'':fmt_(sh.getRange(row,c+1).getValue()); };
   if(String(g('employee_id')).trim().toUpperCase()!==me.readonly.employee_id)
     throw new Error('That is not your dependant.');
@@ -4869,9 +4978,10 @@ function hrDependantsFor(eid){
     })};
 }
 
-function hrSaveDependant(row, data){
+function hrSaveDependant(row, data, key){
   if(!isHR_()) throw new Error('HR only.');
   const sh=sheet_(TAB_DEPENDANTS), hdr=depHdr_();
+  row=guardRow_(sh,hdr,row,{employee_id:(key||{}).employee_id, name:(key||{}).name});
   const g=function(f){ const c=hdr.indexOf(f); return c===-1?'':fmt_(sh.getRange(row,c+1).getValue()); };
   const set=function(f,v){ const c=hdr.indexOf(f); if(c!==-1) sh.getRange(row,c+1).setValue(v); };
   const eid=g('employee_id');
@@ -6081,9 +6191,10 @@ function hrSigningAppointments(){
 
 // Signed, or did not turn up. Signed writes through to FILE_STATUS, which is
 // what the medical enrolment gate reads — so signing unblocks their insurance.
-function hrMarkSigning(row, outcome, note){
+function hrMarkSigning(row, outcome, note, key){
   if(!isHR_()) throw new Error('HR only.');
   const sh=sheet_(TAB_APPOINTMENTS), hdr=apptHdr_();
+  row=guardRow_(sh,hdr,row,{appointment_id:key});
   const g=function(k){ const c=hdr.indexOf(k); return c===-1?'':fmt_(sh.getRange(row,c+1).getValue()); };
   const set=function(k,v){ const c=hdr.indexOf(k); if(c!==-1) sh.getRange(row,c+1).setValue(v); };
   const eid=String(g('employee_id')).trim().toUpperCase();

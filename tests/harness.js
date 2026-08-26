@@ -35,6 +35,10 @@ function makeSandbox(overrides) {
   const TZ = 'Africa/Cairo';
   const sandbox = {
     console,
+    // Share the host Date constructor. The vm context otherwise gets its own,
+    // and a Date created by a test fails `v instanceof Date` inside the .gs
+    // code (fmt_ silently falls through to String(v)).
+    Date,
     Logger: { log() {} },
 
     Session: {

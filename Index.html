@@ -674,14 +674,17 @@ function renderTeam(){
   });
   el('teamList').innerHTML=h;
 }
-var CURRENT_MEMBER_ROW=null;
+var CURRENT_MEMBER_ROW=null,CURRENT_MEMBER_KEY=null;
 function openMember(row){
   CURRENT_MEMBER_ROW=row;
+  // identity travels with the row so the server can survive a sorted sheet
+  var m=(MYTEAM&&MYTEAM.team||[]).filter(function(x){return x.row===row})[0];
+  CURRENT_MEMBER_KEY=m?m.employee_id:'';
   hide('teamView'); show('memberCard');
   el('memberCard').innerHTML='<div class="wrap" style="padding-top:0"><p class="sub">Loading…</p></div>';
   google.script.run.withSuccessHandler(renderMember).withFailureHandler(function(e){
     el('memberCard').innerHTML='<div class="wrap"><span style="color:#c62828">'+e.message+'</span></div>';
-  }).getTeamMemberCard(row);
+  }).getTeamMemberCard(row,CURRENT_MEMBER_KEY);
 }
 function renderMember(c){
   var rows=[
@@ -714,7 +717,7 @@ function saveMember(){
   google.script.run.withSuccessHandler(function(res){
     msg('mgrMsg', res.count? (res.count+' field(s) saved.') : 'Nothing changed.','ok');
   }).withFailureHandler(function(e){msg('mgrMsg',e.message,'err');})
-   .managerSaveTeamMember(CURRENT_MEMBER_ROW, data);
+   .managerSaveTeamMember(CURRENT_MEMBER_ROW, data, CURRENT_MEMBER_KEY);
 }
 function backToTeam(){ hide('memberCard'); show('teamView'); }
 
@@ -905,7 +908,7 @@ function doSearch(){
   google.script.run.withSuccessHandler(function(rows){
     if(!rows.length){el('searchResults').innerHTML='<p class="sub">No match.</p>';return;}
     var h='';rows.forEach(function(r){
-      h+='<div class="qitem" onclick="openEditor('+r.row+')"><div>'+
+      h+='<div class="qitem" onclick="openEditor('+r.row+',\''+(r.employee_id||r.national_id||'')+'\')"><div>'+
          '<div class="nm">'+(r.full_name_en||'(no name)')+'</div>'+
          '<div class="meta">'+(r.employee_id||'no ID')+' &middot; '+r.record_status+'</div></div>'+
          '<span class="pill '+(parseInt(r.completeness)>=100?'verified':'pending')+'">'+(r.completeness||0)+'%</span></div>';
@@ -928,10 +931,10 @@ var EDITOR_GROUPS=[
 ];
 var EDITOR_LOCKED=['employee_id','report_name','report_surname','completeness_%','blocking_gaps','chase_gaps','created_at','created_by','updated_at','updated_by','insurance_wage'];
 
-function openEditor(row){
+function openEditor(row,key){
   hide('hrHome'); show('hrEditor');
   el('hrEditor').innerHTML='<p class="sub">Loading…</p>';
-  google.script.run.withSuccessHandler(renderEditor).withFailureHandler(function(e){el('hrEditor').innerHTML='<span style="color:#c62828">'+e.message+'</span>';}).hrGetRecord(row);
+  google.script.run.withSuccessHandler(renderEditor).withFailureHandler(function(e){el('hrEditor').innerHTML='<span style="color:#c62828">'+e.message+'</span>';}).hrGetRecord(row,key);
 }
 function renderEditor(rec){
   CURRENT=rec;
@@ -961,8 +964,8 @@ function saveEditor(){
   msg('editMsg','Saving…','warn');
   google.script.run.withSuccessHandler(function(res){
     msg('editMsg',res.count?res.count+' field(s) saved.':'Nothing changed.','ok');
-    google.script.run.withSuccessHandler(renderEditor).hrGetRecord(CURRENT._row); // refresh completeness
-  }).withFailureHandler(function(e){msg('editMsg',e.message,'err');}).hrSaveRecord(CURRENT._row,data);
+    google.script.run.withSuccessHandler(renderEditor).hrGetRecord(CURRENT._row, CURRENT.employee_id||CURRENT.national_id); // refresh completeness
+  }).withFailureHandler(function(e){msg('editMsg',e.message,'err');}).hrSaveRecord(CURRENT._row,data,CURRENT.employee_id||CURRENT.national_id);
 }
 function fillCostCentre(project){
   var cc=PROJMAP[project];
@@ -1013,6 +1016,8 @@ function hrRefreshTab(){ if(HRTAB){ HRLOADED[HRTAB]=false; hrTab(HRTAB); } }
 // ---------- signing appointments ----------
 function sgLoad(){
   google.script.run.withSuccessHandler(function(r){
+    window._sg=[];
+    r.days.forEach(function(d){ d.people.forEach(function(p){ window._sg.push(p); }); });
     if(!r.days.length){ el('sgList').innerHTML='<p class="sub">Nobody is booked in.</p>'; return; }
     var h='';
     if(r.overdue) h+='<div class="warnbox"><strong>'+r.overdue+' appointment(s) are in the past</strong> '+
@@ -1047,7 +1052,7 @@ function sgMark(row,outcome){
   google.script.run.withSuccessHandler(function(res){
     msg('sgMsg',res.msg,res.ok?'ok':'err'); sgLoad();
   }).withFailureHandler(function(e){msg('sgMsg',e.message,'err');})
-   .hrMarkSigning(row,outcome,el('sgn'+row)?el('sgn'+row).value:'');
+   .hrMarkSigning(row,outcome,el('sgn'+row)?el('sgn'+row).value:'',((window._sg||[]).filter(function(x){return x.row===row})[0]||{}).appointment_id);
 }
 
 // ---------- who has not signed ----------
@@ -1101,6 +1106,7 @@ function usInvite(){
 }
 
 function renderBank(rows){
+  window._bank=rows;
   if(!rows.length){el('bankList').innerHTML='<p class="sub">No bank details awaiting verification.</p>';return}
   var h='';rows.forEach(function(r){
     h+='<div class="qitem" style="align-items:flex-start"><div>'+
@@ -1128,7 +1134,7 @@ function verifyBank(row,decision){
     el('bankMsg').textContent = res.status==='Verified' ? 'Bank verified. Payment gate released.' : 'Bank details rejected.';
     loadHR();
   }).withFailureHandler(function(e){el('bankMsg').className='msg err';el('bankMsg').textContent=e.message;})
-   .hrVerifyBank(row,decision);
+   .hrVerifyBank(row,decision,((window._bank||[]).filter(function(x){return x.row===row})[0]||{}).employee_id);
 }
 
 
@@ -1137,7 +1143,7 @@ function renderTasks(rows){
   var h='<p class="sub" style="font-weight:bold;color:#2800C8">'+rows.length+' record(s) need something from you</p>';
   rows.forEach(function(r){
     var cls = r.missingCount===0 ? 'verified' : (r.missingCount<=3?'pending':'blocked');
-    h+='<div class="qitem" onclick="openEditor('+r.row+')"><div>'+
+    h+='<div class="qitem" onclick="openEditor('+r.row+',\''+(r.employee_id||r.national_id||'')+'\')"><div>'+
        '<div class="nm">'+(r.full_name_en||'(no name)')+' &middot; '+(r.employee_id||'no ID')+'</div>'+
        '<div class="meta">'+r.reasons.join(' &middot; ')+'</div>'+
        (r.missing && r.missing.length ? '<div class="meta" style="color:#8d6e00">'+r.missing.map(lbl).join(', ')+'</div>' : '')+
@@ -1148,6 +1154,7 @@ function renderTasks(rows){
 }
 
 function renderIntake(rows){
+  window._intake=rows;
   if(!rows.length){el('intakeList').innerHTML='<p class="sub">No new submissions.</p>';return}
   var h='';rows.forEach(function(r){
     var flagged=r.review_status.indexOf('REVIEW')===0;
@@ -1166,11 +1173,11 @@ function approveIntake(row,name){
   google.script.run.withSuccessHandler(function(res){
     if(res.ok){alert('Record created. Employee ID '+res.id+' issued. IT has been asked to create the Konecta email.');loadHR();}
     else alert(res.msg);
-  }).withFailureHandler(function(e){alert(e.message)}).hrApproveIntake(row);
+  }).withFailureHandler(function(e){alert(e.message)}).hrApproveIntake(row,((window._intake||[]).filter(function(x){return x._row===row})[0]||{}).national_id);
 }
 function rejectIntake(row){
   var why=prompt('Reason for rejecting this submission?');if(why===null)return;
-  google.script.run.withSuccessHandler(function(){loadHR()}).hrRejectIntake(row,why);
+  google.script.run.withSuccessHandler(function(){loadHR()}).hrRejectIntake(row,why,((window._intake||[]).filter(function(x){return x._row===row})[0]||{}).national_id);
 }
 function renderHRList(rows){
   if(!rows.length){el('hrList').innerHTML='<p class="sub">No pending records. All caught up.</p>';return}
@@ -1221,14 +1228,15 @@ function gate(t,on){return '<div class="gate"><div class="dot '+(on?'on':'off')+
 function backHR(){hide('hrDetail');show('hrHome');hrRefreshTab()}
 function issueId(row){msg('hrDetMsg','','');if(!confirm('Confirm the national ID matches the physical card, then issue the employee ID?'))return;
   google.script.run.withSuccessHandler(function(res){if(res.ok){alert('Employee ID '+res.id+' issued and emailed to the joiner.');backHR()}else alert(res.msg)})
-  .withFailureHandler(function(e){alert(e.message)}).hrVerifyAndIssue(row)}
+  .withFailureHandler(function(e){alert(e.message)}).hrVerifyAndIssue(row,CURRENT.national_id)}
 function saveOffer(row){msg('hrDetMsg','Saving…','warn');
   google.script.run.withSuccessHandler(function(res){msg('hrDetMsg',(res.count+' field(s) saved.')+(res.active?' Record is now Active.':''),'ok')})
-  .withFailureHandler(function(e){msg('hrDetMsg',e.message,'err')}).hrSaveOffer(row,collect('hrOffer'))}
+  .withFailureHandler(function(e){msg('hrDetMsg',e.message,'err')}).hrSaveOffer(row,collect('hrOffer'),CURRENT.employee_id||CURRENT.national_id)}
 
 // ================= IT =================
 function loadIT(){show('itHome'); loadClearance('IT');google.script.run.withSuccessHandler(renderIT).withFailureHandler(fail).itGetQueue()}
 function renderIT(rows){
+  window._it=rows;
   if(!rows.length){el('itList').innerHTML='<p class="sub">No emails pending. All caught up.</p>';return}
   var h='';rows.forEach(function(r){
     h+='<div class="qitem"><div><div class="nm">'+r.full_name_en+'</div><div class="meta">'+r.employee_id+' &middot; '+r.personal_email+'</div></div>'+
@@ -1238,7 +1246,7 @@ function renderIT(rows){
 }
 function setEmail(row){var v=el('it'+row).value.trim();if(!v){alert('Enter the email.');return}
   google.script.run.withSuccessHandler(function(res){if(res.ok){msg('itMsg','Email saved.','ok');loadIT()}else msg('itMsg',res.msg,'err')})
-  .withFailureHandler(function(e){msg('itMsg',e.message,'err')}).itSetEmail(row,v)}
+  .withFailureHandler(function(e){msg('itMsg',e.message,'err')}).itSetEmail(row,v,((window._it||[]).filter(function(x){return x.row===row})[0]||{}).employee_id)}
 
 // ===================== LEAVE TAB =====================
 var LEAVEINFO=null, LVPICKER=[];
@@ -1386,6 +1394,7 @@ function loadApprovals(){
   }).getLeaveApprovals();
 }
 function renderApprovals(res){
+  window._appr=res.items||[];
   if(!res.isApprover||!res.items.length){
     el('apprList').innerHTML='<p class="sub">Nothing waiting on you.</p>'; return;
   }
@@ -1432,7 +1441,7 @@ function decide(row,what){
   google.script.run.withSuccessHandler(function(res){
     msg('apprMsg','Recorded — '+(res.final==='Pending'?'now with the dotted manager.':res.final.toLowerCase()+'.'),'ok');
     loadApprovals();
-  }).withFailureHandler(function(e){msg('apprMsg',e.message,'err');}).decideLeave(row,what,kept.length,c,kept);
+  }).withFailureHandler(function(e){msg('apprMsg',e.message,'err');}).decideLeave(row,what,kept.length,c,kept,((window._appr||[]).filter(function(x){return x.row===row})[0]||{}).request_id);
 }
 
 // ===================== LEAVE VALIDATION (HR) =====================
@@ -1442,6 +1451,7 @@ function loadHRLeave(){
   }).hrGetLeaveToValidate();
 }
 function renderHRLeave(rows){
+  window._hrlv=rows||[];
   if(!rows||!rows.length){ el('hrLeaveList').innerHTML='<p class="sub">Nothing awaiting validation.</p>'; return; }
   var h='';
   rows.forEach(function(r){
@@ -1469,7 +1479,7 @@ function hrLeave(row,what){
   msg('hrLeaveMsg','Saving…','warn');
   google.script.run.withSuccessHandler(function(res){
     msg('hrLeaveMsg','Recorded — '+res.final.toLowerCase()+'.','ok'); loadHRLeave();
-  }).withFailureHandler(function(e){msg('hrLeaveMsg',e.message,'err');}).hrValidateLeave(row,what,d,c);
+  }).withFailureHandler(function(e){msg('hrLeaveMsg',e.message,'err');}).hrValidateLeave(row,what,d,c,((window._hrlv||[]).filter(function(x){return x.row===row})[0]||{}).request_id);
 }
 
 // ---------- file leave on behalf of a team member ----------
@@ -1586,6 +1596,7 @@ function renderDelegates(d){
   o+=grp('My team', d.team); o+=grp('Other colleagues', d.others);
   el('delWho').innerHTML=o;
   var cur=(d.current||[]).filter(function(x){return String(x.active).toLowerCase()==='yes';});
+  window._del=cur;
   if(!cur.length){ el('delCurrent').innerHTML='<p class="sub">No one is currently approving on your behalf.</p>'; return; }
   var h='';
   cur.forEach(function(c){
@@ -1609,7 +1620,7 @@ function saveDelegate(){
 function endDel(row){
   if(!confirm('End this delegation?')) return;
   google.script.run.withSuccessHandler(function(){ msg('delMsg','Delegation ended.','ok'); loadDelegates(); })
-   .withFailureHandler(function(e){msg('delMsg',e.message,'err');}).endDelegate(row);
+   .withFailureHandler(function(e){msg('delMsg',e.message,'err');}).endDelegate(row,((window._del||[]).filter(function(x){return x.row===row})[0]||{}).delegate_email);
 }
 
 // ---------- employee: My Contract ----------
@@ -2328,6 +2339,7 @@ function loadResignApprovals(){
   }).getResignationApprovals();
 }
 function renderResignApprovals(res){
+  window._rs=res.items||[];
   if(!res.isApprover||!res.items.length){ el('rsList').innerHTML='<p class="sub">Nothing waiting on you.</p>'; return; }
   var h='';
   res.items.forEach(function(r){
@@ -2374,14 +2386,14 @@ function decideRs(row,what){
   google.script.run.withSuccessHandler(function(res){
     msg('rsMsg', res.agreed? ('Agreed — last working day '+res.date+'. HR has been notified.') : (res.msg||'Recorded.'), res.agreed?'ok':'warn');
     loadResignApprovals();
-  }).withFailureHandler(function(e){msg('rsMsg',e.message,'err');}).decideResignation(row,what,d,c);
+  }).withFailureHandler(function(e){msg('rsMsg',e.message,'err');}).decideResignation(row,what,d,c,((window._rs||[]).filter(function(x){return x.row===row})[0]||{}).resignation_id);
 }
 function decideWd(row,accept){
   if(!confirm(accept?'Agree to withdraw this resignation? They will stay.':'Decline the withdrawal? Their notice continues.')) return;
   msg('rsMsg','Saving…','warn');
   google.script.run.withSuccessHandler(function(){ msg('rsMsg','Recorded.','ok'); loadResignApprovals(); loadClearance(''); })
    .withFailureHandler(function(e){msg('rsMsg',e.message,'err');})
-   .decideWithdrawal(row,accept,el('wc'+row)?el('wc'+row).value:'');
+   .decideWithdrawal(row,accept,el('wc'+row)?el('wc'+row).value:'',((window._rs||[]).filter(function(x){return x.row===row})[0]||{}).resignation_id);
 }
 
 // ===================== CLEARANCE =====================
@@ -2456,7 +2468,7 @@ function doHandover(row){
     msg('clMsg', res.bothConfirmed? 'Handover complete. IT and Facilities have been asked to collect equipment.' : 'Recorded. Waiting on the other manager.','ok');
     loadClearance('');
   }).withFailureHandler(function(e){msg('clMsg',e.message,'err');})
-   .confirmHandover(row, el('hn'+row)?el('hn'+row).value:'');
+   .confirmHandover(row, el('hn'+row)?el('hn'+row).value:'', ((CLTASKS&&CLTASKS.items||[]).filter(function(x){return x.row===row})[0]||{}).clearance_id);
 }
 function submitCl(row,dept,target){
   var items={};
@@ -2470,7 +2482,7 @@ function submitCl(row,dept,target){
     google.script.run.withSuccessHandler(function(res){
       msg(mid, res.cleared? 'Cleared. Settlement can be released — HR has the deduction total.' : (res.msg||'Saved.'), res.ok?'ok':'err');
       loadClearance(target);
-    }).withFailureHandler(function(e){msg(mid,e.message,'err');}).hrCompleteClearance(row,items,note);
+    }).withFailureHandler(function(e){msg(mid,e.message,'err');}).hrCompleteClearance(row,items,note,((CLTASKS&&CLTASKS.items||[]).filter(function(x){return x.row===row})[0]||{}).clearance_id);
     return;
   }
   var loans;
@@ -2484,7 +2496,7 @@ function submitCl(row,dept,target){
       (res.deduction? (' — EGP '+res.deduction+' will be deducted.') : '');
     msg(mid,m,'ok'); loadClearance(target);
   }).withFailureHandler(function(e){msg(mid,e.message,'err');})
-   .submitClearanceItems(row,dept,items,amounts,note,loans);
+   .submitClearanceItems(row,dept,items,amounts,note,loans,((CLTASKS&&CLTASKS.items||[]).filter(function(x){return x.row===row})[0]||{}).clearance_id);
 }
 
 function nsTypeChanged(){
@@ -2527,6 +2539,7 @@ function submitNoShow(){
 }
 function loadNoShows(){
   google.script.run.withSuccessHandler(function(rows){
+    window._ns=rows;
     if(!rows.length){ el('nsHrList').innerHTML='<p class="sub">No open no shows.</p>'; return; }
     var h='';
     rows.forEach(function(r){
@@ -2555,7 +2568,7 @@ function resolveNs(row){
   msg('nsHrMsg','Saving…','warn');
   google.script.run.withSuccessHandler(function(){ msg('nsHrMsg','Recorded.','ok'); loadNoShows(); })
    .withFailureHandler(function(e){msg('nsHrMsg',e.message,'err');})
-   .hrResolveNoShow(row,o,el('nn'+row)?el('nn'+row).value:'');
+   .hrResolveNoShow(row,o,el('nn'+row)?el('nn'+row).value:'',((window._ns||[]).filter(function(x){return x.row===row})[0]||{}).noshow_id);
 }
 
 // ===================== TERMINATION =====================
@@ -2619,6 +2632,7 @@ function submitTerm(){
 
 function loadTerminations(){
   google.script.run.withSuccessHandler(function(rows){
+    window._tm=rows;
     if(!rows.length){ el('tmHrList').innerHTML='<p class="sub">Nothing awaiting a decision.</p>'; return; }
     var h='';
     rows.forEach(function(r){
@@ -2642,7 +2656,7 @@ function decideTerm(row,approve){
   msg('tmHrMsg','Saving…','warn');
   google.script.run.withSuccessHandler(function(){ msg('tmHrMsg','Recorded.','ok'); loadTerminations(); })
    .withFailureHandler(function(e){msg('tmHrMsg',e.message,'err');})
-   .hrDecideTermination(row,approve,el('tn'+row)?el('tn'+row).value:'');
+   .hrDecideTermination(row,approve,el('tn'+row)?el('tn'+row).value:'',((window._tm||[]).filter(function(x){return x.row===row})[0]||{}).termination_id);
 }
 
 // ===================== EMPLOYEE FILE REVIEW =====================

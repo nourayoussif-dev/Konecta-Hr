@@ -57,6 +57,7 @@ global.throws = throws;
 
 require('./payrollengine.test.js');
 require('./coreaccess.test.js');
+require('./rowguard.test.js');
 
 console.log('\n' + '─'.repeat(64));
 console.log(`\x1b[32m${results.pass} passed\x1b[0m` +
