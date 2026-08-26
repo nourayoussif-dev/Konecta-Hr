@@ -3559,6 +3559,17 @@ function getTerminationContext(employeeId){
           'contract_type','probation_end_date','project']);
   if(!f.employee_id) return {found:false,msg:'No employee found with ID '+eid+'.'};
 
+  // Same rule as initiateTermination: HR, or the person's direct manager
+  // (delegates included via actingFor_). This function was the one ungated
+  // door in the app — without this check any employee could pull any
+  // colleague's hire date, contract end, managers and probation status from
+  // the browser console.
+  if(!isHR_()){
+    const acting=actingFor_();
+    if(acting.indexOf(resolveApprover_(f.direct_manager))===-1)
+      throw new Error('Only the direct manager or HR can view this.');
+  }
+
   // is the probation window still open?
   let probation={applies:false};
   if(f.hire_date){
@@ -3570,8 +3581,13 @@ function getTerminationContext(employeeId){
                  endDate: f.probation_end_date||''};
     }
   }
+  // konecta_email is used by initiateTermination when it writes the
+  // termination row — it was fetched above but never returned, so every
+  // termination stored a blank email and the employee notifications that
+  // read that column silently went nowhere.
   return {found:true, employee_id:f.employee_id, name:f.full_name_en, job_title:f.job_title,
           project:f.project, status:f.record_status, hire_date:f.hire_date,
+          konecta_email:f.konecta_email,
           contract_end:f.contract_end_date, contract_type:f.contract_type,
           direct_manager:f.direct_manager, dotted_manager:f.dotted_manager,
           skip_manager:skipManagerOf_(eid), probation:probation,
