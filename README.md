@@ -157,10 +157,13 @@ produced by the outsourced provider:
 | Income tax | 99.33% |
 | Social insurance | 99.0% |
 
-Tax brackets, insurance ceilings and allowance rates live in `CFG`,
-`BRACKET_LOWER`, `RATE_DELTA` and `CANCEL` at the top of `payrollengine.gs`.
-**These are law-dependent and are not versioned by effective date** — when the
-law changes, historic recalculation will silently use the new figures.
+Tax brackets, insurance ceilings and allowance rates live in `RULESETS` at
+the top of `payrollengine.gs`, **versioned by effective date**.
+`calculateEmployee` binds the ruleset in force for the payroll month it is
+computing, so an old month recomputed after a law change keeps the maths it
+was paid under. When the law changes, append a new entry with its
+`effective_from` — never edit an old one. A month earlier than the earliest
+ruleset refuses to compute rather than guessing.
 
 ---
 

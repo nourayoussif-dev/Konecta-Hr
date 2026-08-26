@@ -276,6 +276,10 @@ describe('Allowance pricing', () => {
 
 // ───────────────────────────────────────────────── whole-employee wiring ──
 describe('calculateEmployee — the components must reconcile', () => {
+  // The engine refuses months before its earliest ruleset (2026-07-01),
+  // so the full-calculation tests run on August 2026.
+  const AUG_START = D(2026, 8, 1);
+  const AUG_END   = D(2026, 8, 31);
   const base = {
     id: 'EG1234', basic: 12000, workingDays: 30, arrearsDays: 0,
     hireDate: D(2020, 1, 1), exitDate: null,
@@ -283,7 +287,7 @@ describe('calculateEmployee — the components must reconcile', () => {
     dedTaxable: 0, otherDeductions: 0,
     hours135: 0, hours170: 0, publicHolidayDays: 0, weekendDays: 0
   };
-  const calc = o => g.calculateEmployee(Object.assign({}, base, o), JAN_START, JAN_END);
+  const calc = o => g.calculateEmployee(Object.assign({}, base, o), AUG_START, AUG_END);
 
   test('net = total salary - deductions + non-taxable amounts', () => {
     const r = calc({ netAddOns: 2000, nonTaxableAmounts: 500, otherDeductions: 300 });
@@ -325,7 +329,7 @@ describe('calculateEmployee — the components must reconcile', () => {
   test('no component comes back NaN on a sparse employee record', () => {
     const r = g.calculateEmployee(
       { id: 'EG9', basic: 8000, workingDays: 30, hireDate: D(2020, 1, 1) },
-      JAN_START, JAN_END);
+      AUG_START, AUG_END);
     Object.keys(r).forEach(k => {
       if (typeof r[k] === 'number' && isNaN(r[k])) throw new Error(`${k} is NaN`);
     });
@@ -337,7 +341,7 @@ describe('calculateEmployee — the components must reconcile', () => {
     // reading NaN and the run reported success.
     const bad = v => () => g.calculateEmployee(
       { id: 'EG777', basic: v, workingDays: 30, hireDate: D(2020, 1, 1) },
-      JAN_START, JAN_END);
+      AUG_START, AUG_END);
     throws(bad(undefined), 'undefined basic');
     throws(bad(null),      'null basic');
     throws(bad(''),        'blank cell');
@@ -349,7 +353,7 @@ describe('calculateEmployee — the components must reconcile', () => {
   test('the refusal names the employee, so the record can be found and fixed', () => {
     try {
       g.calculateEmployee({ id: 'EG0421', workingDays: 30, hireDate: D(2020, 1, 1) },
-                          JAN_START, JAN_END);
+                          AUG_START, AUG_END);
       throw new Error('expected a throw');
     } catch (e) {
       if (!/EG0421/.test(e.message)) throw new Error(`message lacks the id: ${e.message}`);
@@ -360,8 +364,52 @@ describe('calculateEmployee — the components must reconcile', () => {
   test('a zero basic salary is allowed — it is a real case, unlike a blank one', () => {
     const r = g.calculateEmployee(
       { id: 'EG888', basic: 0, workingDays: 30, hireDate: D(2020, 1, 1) },
-      JAN_START, JAN_END);
+      AUG_START, AUG_END);
     eq(r.worthBasic, 0);
     eq(isNaN(r.netSalary), false);
+  });
+});
+
+// ───────────────────────────────────────────────── rule versioning ──
+describe('Payroll rules are versioned by effective date', () => {
+  test('the working bindings default to the newest ruleset', () => {
+    const newest = g.__eval('RULESETS[RULESETS.length-1]');
+    eq(g.CFG === undefined ? g.__eval('CFG.SI_EMPLOYEE') : g.CFG.SI_EMPLOYEE,
+       newest.CFG.SI_EMPLOYEE);
+  });
+
+  test('rulesFor picks the set in force on, and after, its effective date', () => {
+    eq(g.rulesFor(D(2026, 7, 1)).effective_from, '2026-07-01', 'on the day');
+    eq(g.rulesFor(D(2026, 12, 31)).effective_from, '2026-07-01', 'months later');
+  });
+
+  test('a month before the earliest ruleset refuses to compute', () => {
+    throws(() => g.rulesFor(D(2026, 6, 30)));
+    throws(() => g.calculateEmployee(
+      { id: 'EG1', basic: 10000, workingDays: 30, hireDate: D(2020, 1, 1) },
+      D(2026, 1, 1), D(2026, 1, 31)), 'January predates the validated rules');
+  });
+
+  test('an old month keeps its old maths after a law change', () => {
+    // Fabricate a 2027 amendment: SI employee share rises to 12%.
+    g.__eval(`RULESETS.push({
+      effective_from: '2027-01-01',
+      CFG: Object.assign({}, RULESETS[0].CFG, { SI_EMPLOYEE: 0.12 }),
+      BRACKET_LOWER: RULESETS[0].BRACKET_LOWER,
+      RATE_DELTA: RULESETS[0].RATE_DELTA,
+      CANCEL: RULESETS[0].CANCEL
+    })`);
+    try {
+      const emp = { id: 'EG1', basic: 10000, workingDays: 30, hireDate: D(2020, 1, 1) };
+      const before = g.calculateEmployee(Object.assign({}, emp), D(2026, 8, 1), D(2026, 8, 31));
+      const after  = g.calculateEmployee(Object.assign({}, emp), D(2027, 2, 1), D(2027, 2, 28));
+      close(before.employeeSI, 10000 * 0.11, 0.001, 'Aug 2026 under the 11% rules');
+      close(after.employeeSI,  10000 * 0.12, 0.001, 'Feb 2027 under the 12% rules');
+      // and computing the OLD month again after the change still uses 11%
+      const again = g.calculateEmployee(Object.assign({}, emp), D(2026, 8, 1), D(2026, 8, 31));
+      close(again.employeeSI, 10000 * 0.11, 0.001, 'the old month kept its old maths');
+    } finally {
+      g.__eval('RULESETS.pop(); useRulesFor(RULESETS[RULESETS.length-1].effective_from)');
+    }
   });
 });

@@ -11,34 +11,94 @@
  */
 
 // ============ CONFIGURATION =================================================
-var CFG = {
-  PERSONAL_EXEMPTION_ANNUAL : 20000,     // annual personal exemption
-  MARTYRS_RATE              : 0.0005,    // 0.05% of total salary
-  SI_EMPLOYEE               : 0.11,      // employee social insurance share
-  SI_EMPLOYER               : 0.1875,    // employer social insurance share
-  INS_WAGE_MAX              : 16700,     // insurance wage ceiling
-  INS_WAGE_MIN              : 2300,      // insurance wage floor
-  EMERGENCY_FUND_FLAT       : 23.70,     // flat emergency fund per insured employee
-  STANDARD_MONTH_DAYS       : 30,
-  WORK_HOURS_PER_DAY        : 8,
-  OT_DAY                    : 1.35,      // overtime multiplier, day shift
-  OT_NIGHT                  : 1.70,      // overtime multiplier, night shift
-  OT_PUBLIC_HOLIDAY         : 1.00,      // public holiday worked, per day
-  TRANSPORT_NET_PER_MONTH   : 3000,      // net, per 22 working days
-  SHIFT_NET_PER_MONTH       : 2000,      // net, per 22 working days
-  ONCALL_NET_PER_MONTH      : 2000,      // net, per 30-day month
-  IFTAR_NET_PER_DAY         : 250,       // net
-  WORKING_DAYS_PER_MONTH    : 22,        // for transport and shift allowance
-  LEAVE_DAYS_PER_YEAR       : 15         // default; individual contracts may differ
-};
+//
+// VERSIONED BY EFFECTIVE DATE.
+//
+// Tax brackets, insurance ceilings and allowance rates are law and scheme,
+// and law changes. Before this, the constants were flat: recalculating an
+// old month after a law change silently used the NEW figures, so a payslip
+// reissued for March showed numbers March was never paid under.
+//
+// Now every vintage of the rules lives in RULESETS with the date it came
+// into force. calculateEmployee resolves the ruleset from the payroll month
+// it is asked to compute, so an old month keeps its old maths.
+//
+// WHEN THE LAW CHANGES: append a new entry — do not edit the old one. The
+// old entry is the record of what past months were computed under.
+//
+// A month EARLIER than the earliest ruleset refuses to compute rather than
+// guessing: these figures were validated against the July 2026 provider
+// run, and no earlier vintage has been entered. If the same rates were in
+// force earlier, move effective_from back — that is a statement of fact
+// about the law, so make it deliberately.
+var RULESETS = [
+  {
+    effective_from: '2026-07-01',   // validated 20/08/2026 vs the July 2026 payroll
+    CFG: {
+      PERSONAL_EXEMPTION_ANNUAL : 20000,     // annual personal exemption
+      MARTYRS_RATE              : 0.0005,    // 0.05% of total salary
+      SI_EMPLOYEE               : 0.11,      // employee social insurance share
+      SI_EMPLOYER               : 0.1875,    // employer social insurance share
+      INS_WAGE_MAX              : 16700,     // insurance wage ceiling
+      INS_WAGE_MIN              : 2300,      // insurance wage floor
+      EMERGENCY_FUND_FLAT       : 23.70,     // flat emergency fund per insured employee
+      STANDARD_MONTH_DAYS       : 30,
+      WORK_HOURS_PER_DAY        : 8,
+      OT_DAY                    : 1.35,      // overtime multiplier, day shift
+      OT_NIGHT                  : 1.70,      // overtime multiplier, night shift
+      OT_PUBLIC_HOLIDAY         : 1.00,      // public holiday worked, per day
+      TRANSPORT_NET_PER_MONTH   : 3000,      // net, per 22 working days
+      SHIFT_NET_PER_MONTH       : 2000,      // net, per 22 working days
+      ONCALL_NET_PER_MONTH      : 2000,      // net, per 30-day month
+      IFTAR_NET_PER_DAY         : 250,       // net
+      WORKING_DAYS_PER_MONTH    : 22,        // for transport and shift allowance
+      LEAVE_DAYS_PER_YEAR       : 15         // default; individual contracts may differ
+    },
+    // Income tax brackets. LOWER is the bracket floor, DELTA the marginal step.
+    BRACKET_LOWER: [0, 40000, 55000, 70000, 200000, 400000, 1200000],
+    RATE_DELTA:    [0, 0.10,  0.05,  0.05,  0.025,  0.025,  0.025],
+    // Bracket cancellation. Above each annual threshold the lower brackets are
+    // cancelled, so high earners lose the benefit of the lower rates.
+    CANCEL: [[0,1],[600000,2],[700000,3],[800000,4],[900000,5],[1200000,6]]
+  }
+];
 
-// Income tax brackets. LOWER is the bracket floor, DELTA the marginal step.
-var BRACKET_LOWER = [0, 40000, 55000, 70000, 200000, 400000, 1200000];
-var RATE_DELTA    = [0, 0.10,  0.05,  0.05,  0.025,  0.025,  0.025];
+/** The ruleset in force on a given date. Throws rather than guessing. */
+function rulesFor(dateLike) {
+  var d = dateLike instanceof Date ? dateLike : new Date(dateLike);
+  if (isNaN(d)) throw new Error('Payroll rules: not a date: ' + dateLike);
+  var best = null;
+  for (var i = 0; i < RULESETS.length; i++) {
+    var from = new Date(RULESETS[i].effective_from);
+    if (from <= d && (!best || from > new Date(best.effective_from))) best = RULESETS[i];
+  }
+  if (!best) throw new Error(
+    'No payroll ruleset covers ' + d.toISOString().slice(0, 10) +
+    '. The earliest on record starts ' + RULESETS[0].effective_from +
+    '. To compute this month, add the ruleset that was in force then.');
+  return best;
+}
 
-// Bracket cancellation. Above each annual threshold the lower brackets are
-// cancelled, so high earners lose the benefit of the lower rates.
-var CANCEL = [[0,1],[600000,2],[700000,3],[800000,4],[900000,5],[1200000,6]];
+/**
+ * Make a ruleset the active one. calculateEmployee calls this with the
+ * payroll month, so everything downstream — tax, insurance, overtime,
+ * allowance pricing — transparently uses the right vintage. Apps Script
+ * executions are single-threaded, so swapping the working bindings is safe.
+ */
+function useRulesFor(dateLike) {
+  var r = rulesFor(dateLike);
+  CFG = r.CFG; BRACKET_LOWER = r.BRACKET_LOWER;
+  RATE_DELTA = r.RATE_DELTA; CANCEL = r.CANCEL;
+  return r;
+}
+
+// The working bindings. Default to the newest ruleset so direct calls to the
+// pricing helpers outside a payroll run price at current law.
+var _newest = RULESETS[RULESETS.length - 1];
+var CFG = _newest.CFG;
+var BRACKET_LOWER = _newest.BRACKET_LOWER;
+var RATE_DELTA = _newest.RATE_DELTA;
+var CANCEL = _newest.CANCEL;
 
 // Employees exempt from social insurance, with the reason on record.
 // EG0009 Walid Fairouz — army retirement, already covered.
@@ -220,6 +280,10 @@ function wasPaidInPeriod(employeeId, period) {
  *   dedTaxable, otherDeductions, hours135, hours170, publicHolidayDays, weekendDays
  */
 function calculateEmployee(emp, monthStart, monthEnd) {
+  // Bind the rules that were in force in THIS payroll month, so an old
+  // month recomputed after a law change keeps the maths it was paid under.
+  useRulesFor(monthStart);
+
   // Refuse a record we cannot price, rather than paying out NaN.
   //
   // A blank or non-numeric basic_salary used to propagate NaN through
