@@ -128,7 +128,7 @@ creates them, so they must be checked after any project rebuild.
 
 | Function | Cadence | What it does |
 |---|---|---|
-| `leaveDailyRun` | Daily, early morning | Reminders, escalation, auto-approval of annual leave |
+| `leaveDailyRun` | Daily, early morning | Schema check (emails HR if a tab/column was renamed), reminders, escalation, auto-approval of annual leave |
 | `resignationDailyRun` | Daily | Resignation reminders, auto-standing of the employee's date |
 | `contractExpiryRun` | Daily | Warns on contracts expiring within 60 days |
 | `runChecksThisMonth` | Monthly, before payroll | Pre-payroll validation |

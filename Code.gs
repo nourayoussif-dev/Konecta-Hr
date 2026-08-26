@@ -208,6 +208,105 @@ function firstFreeRow_(sh,hdr){
   return sh.getMaxRows()+1;
 }
 // ================================================================
+// SCHEMA GUARD
+//
+// Every sheet read resolves columns by header name at runtime. A renamed
+// or deleted header does not throw: indexOf returns -1, row[-1] is
+// undefined, and the value flows onward as if the cell were blank. The
+// failure is silent and shows up later as wrong data — a payslip with no
+// salary, a leave request with no approver.
+//
+// This guard makes it loud instead. It checks that every tab the code
+// depends on exists and still carries the columns the code reads.
+//
+//   hrSchemaCheck()     on demand from the HR console
+//   schemaDailyCheck_() at the start of leaveDailyRun — emails HR when
+//                       something is broken, every day until it is fixed
+//
+// The EMPLOYEES list is assembled from the field-group constants at the
+// top of this file, so extending a gate keeps the guard in step for free.
+// The workflow tabs are listed conservatively: only columns the code
+// verifiably reads, because a wrong entry here is a false alarm.
+// ================================================================
+function requiredSchema_(){
+  const employees = {};
+  [].concat(GATE1, GATE2, GATE3, EMPLOYEE_EDITABLE, BANK_FIELDS,
+            READ_ONLY_VISIBLE,
+            ['exit_date','exit_type','dotted_manager','project','company_type',
+             'leave_entitlement','updated_at','updated_by','created_at','created_by'])
+    .forEach(function(f){ employees[f]=true; });
+
+  return {
+    'EMPLOYEES': Object.keys(employees),
+    'LEAVE': ['request_id','employee_id','employee_name','leave_type','track',
+              'start_date','end_date','days_requested','days_approved',
+              'final_status','direct_status','dotted_status',
+              'direct_manager','dotted_manager','weekend_pattern','submitted_at'],
+    'LEAVE_ADJUSTMENTS': ['employee_id','days','reason','adjustment_date','added_by'],
+    'DELEGATES': ['manager_id','delegate_email','active','from_date','to_date'],
+    'RESIGNATIONS': ['resignation_id','employee_id','final_status','proposed_last_day',
+                     'withdraw_status','direct_manager','dotted_manager',
+                     'submitted_at','reminder_count','last_reminder_at'],
+    'CLEARANCE': ['clearance_id','employee_id','final_status',
+                  'it_status','fac_status','hr_status'],
+    'NO_SHOW': ['noshow_id','employee_id','hr_status','absent_since'],
+    'TERMINATIONS': ['termination_id','employee_id','hr_status','final_status',
+                     'direct_manager'],
+    'DEPENDANTS': ['employee_id','name','relation','status','requested_at','notes'],
+    'SIGNING_APPOINTMENTS': ['appointment_id','employee_id','status','appointment_date'],
+    // layout-only checks: these tabs must exist, but their columns are either
+    // positional (CHANGE LOG appends 13 cells), a single date column
+    // (HOLIDAYS), or live on a non-standard header row (INTAKE, MANAGERS).
+    'CHANGE LOG': [],
+    'HOLIDAYS': [],
+    'LEAVE_TYPES': []
+  };
+}
+
+function schemaProblems_(){
+  const want=requiredSchema_();
+  const problems=[];
+  Object.keys(want).forEach(function(tab){
+    const sh=sheet_(tab);
+    if(!sh){ problems.push({tab:tab, missing_tab:true}); return; }
+    if(!want[tab].length) return;
+    const hdr=headers_(tab);
+    const missing=want[tab].filter(function(f){ return hdr.indexOf(f)===-1; });
+    if(missing.length) problems.push({tab:tab, missing_columns:missing});
+  });
+  return problems;
+}
+
+// HR console: the full report.
+function hrSchemaCheck(){
+  if(!isHR_()) throw new Error('HR only.');
+  const problems=schemaProblems_();
+  return {ok:!problems.length, problems:problems,
+          msg: problems.length? 'Schema problems found — see the list. Reads on these columns are coming back BLANK.'
+                              : 'Every tab and column the code depends on is present.'};
+}
+
+// Called by leaveDailyRun. Emails HR while anything is broken.
+function schemaDailyCheck_(){
+  try{
+    const problems=schemaProblems_();
+    if(!problems.length) return true;
+    const lines=problems.map(function(p){
+      return p.missing_tab
+        ? 'TAB MISSING: '+p.tab
+        : p.tab+' is missing column(s): '+p.missing_columns.join(', ');
+    });
+    notifyHR_('SCHEMA BROKEN — the app is reading blanks',
+      'A tab or column the code depends on has been renamed or deleted.\n\n'+
+      lines.join('\n')+
+      '\n\nUntil this is restored, every read of those columns silently returns '+
+      'nothing — leave balances, approvals and payroll inputs may all be wrong. '+
+      'Restore the original header names (see docs/SCHEMA.md in the repository).');
+    return false;
+  }catch(e){ console.error('schemaDailyCheck_ failed: '+e); return false; }
+}
+
+// ================================================================
 // ROW IDENTITY GUARD
 //
 // The row number a browser sends can be stale: HR sorts or filters the
@@ -2050,6 +2149,7 @@ const AUTO_APPROVE_AFTER_DAYS = 5;      // working days with no decision
 const REMIND_ON_DAYS = [2, 4];          // day 4 copies HR
 
 function leaveDailyRun(){
+  schemaDailyCheck_();
   const sh=sheet_(TAB_LEAVE);
   if(!sh || sh.getLastRow()<2) return;
   const hdr=leaveHdr_(); const i=function(f){return hdr.indexOf(f);};

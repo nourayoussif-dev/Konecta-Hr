@@ -113,6 +113,12 @@ function load(files, overrides) {
       throw new Error(`harness: failed loading ${f}: ${e.message}`);
     }
   }
+  // const/let declared at a .gs file's top level live in the context, not on
+  // the sandbox object. __eval lets a test read them: g.__eval('GATE1').
+  Object.defineProperty(sandbox, '__eval', {
+    value: expr => vm.runInContext(expr, context),
+    enumerable: false
+  });
   return sandbox;
 }
 
