@@ -621,7 +621,7 @@ google.script.run.withSuccessHandler(function(b){
   routeByRole(b.role);
 }).withFailureHandler(fail).getBootstrap();
 var BOOT_RECORD=null;
-function fail(e){el('loading').innerHTML='<span style="color:#c62828">'+e.message+'</span>'}
+function fail(e){el('loading').innerHTML='<span style="color:#c62828">'+esc(e.message)+'</span>'}
 
 function routeByRole(role){
   ROLE=role; el('who').textContent=role.email; hide('loading'); setTimeout(function(){var sb=el('empSearch'); if(sb) sb.addEventListener('keydown',empSearchEnter);},300);
@@ -670,7 +670,7 @@ function renderTeam(){
   if(!MYTEAM||!MYTEAM.team.length){el('teamList').innerHTML='<p class="sub">No one reports to you yet.</p>';return;}
   var h='';MYTEAM.team.forEach(function(m){
     h+='<div class="qitem" onclick="openMember('+m.row+')"><div>'+
-       '<div class="nm">'+(m.full_name_en||'(no name)')+'</div>'+
+       '<div class="nm">'+esc(m.full_name_en||'(no name)')+'</div>'+
        '<div class="meta">'+(m.employee_id||'')+' &middot; '+(m.job_title||'')+(m.project?(' &middot; '+m.project):'')+'</div></div>'+
        '<span style="color:#2800C8">view &rsaquo;</span></div>';
   });
@@ -685,7 +685,7 @@ function openMember(row){
   hide('teamView'); show('memberCard');
   el('memberCard').innerHTML='<div class="wrap" style="padding-top:0"><p class="sub">Loading…</p></div>';
   google.script.run.withSuccessHandler(renderMember).withFailureHandler(function(e){
-    el('memberCard').innerHTML='<div class="wrap"><span style="color:#c62828">'+e.message+'</span></div>';
+    el('memberCard').innerHTML='<div class="wrap"><span style="color:#c62828">'+esc(e.message)+'</span></div>';
   }).getTeamMemberCard(row,CURRENT_MEMBER_KEY);
 }
 function renderMember(c){
@@ -698,7 +698,7 @@ function renderMember(c){
   ];
   var h='<div class="wrap" style="padding-top:0">'+
     '<span class="back" onclick="backToTeam()">&larr; back to my team</span>'+
-    '<div class="card"><h2>'+(c.full_name_en||'Team member')+'</h2>'+
+    '<div class="card"><h2>'+esc(c.full_name_en||'Team member')+'</h2>'+
     '<p class="sub">View only. Contact HR for any changes to these details.</p><div class="ro">';
   rows.forEach(function(r){ h+='<div class="row"><span class="k">'+r[0]+'</span><span class="v">'+(r[1]||'—')+'</span></div>'; });
   h+='</div></div>';
@@ -781,11 +781,13 @@ function parseAddress(a){
   a=String(a||''); var p=a.split(',').map(function(x){return x.trim();});
   return {street:p[0]||'', building:p[1]||'', apartment:p[2]||''};
 }
-function esc(v){return String(v==null?'':v).replace(/"/g,'&quot;');}
-// Full HTML-text escaper for values dropped into innerHTML. esc() only handles
-// the attribute-quote case; h() is for element text and must cover < > & too,
-// or an employee-controlled name becomes stored XSS in the HR console.
-function h(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+// Full HTML escaper. Used both for element text and attribute values dropped
+// into innerHTML. It MUST cover & < > " ' — an employee-controlled name or note
+// rendered unescaped is stored XSS that fires with the viewer's privileges
+// (an employee planting it in their own name executes inside the HR console).
+// (Named esc, upgraded from a quotes-only version; the name h is unusable here
+//  because the codebase uses h as a local HTML-accumulator variable.)
+function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function wireAddress(){/* nothing to wire; combined at save */}
 
 // ---------- dependants: their own tab, no cap ----------
@@ -798,7 +800,7 @@ function loadMyDependants(){
     MYDEPS=d;
     renderDependants();
   }).withFailureHandler(function(e){
-    el('depBox').innerHTML='<p class="sub" style="color:#c62828">'+e.message+'</p>';
+    el('depBox').innerHTML='<p class="sub" style="color:#c62828">'+esc(e.message)+'</p>';
   }).getMyDependants();
 }
 
@@ -816,7 +818,7 @@ function renderDependants(){
     h+='<p class="sub" style="margin:14px 0 6px"><strong>Already covered</strong> — contact HR to change these.</p>';
     locked.forEach(function(d){
       h+='<div class="qitem" style="cursor:default"><div>'+
-         '<div class="nm">'+d.name+'</div>'+
+         '<div class="nm">'+esc(d.name)+'</div>'+
          '<div class="meta">'+(d.relation||'—')+(d.date_of_birth?(' &middot; born '+d.date_of_birth):'')+
          (d.funding==='Employee-paid'?' &middot; paid by you':'')+'</div></div>'+
          '<span class="pill verified">'+d.status+'</span></div>';
@@ -915,12 +917,12 @@ function doSearch(){
     if(!rows.length){el('searchResults').innerHTML='<p class="sub">No match.</p>';return;}
     var h='';rows.forEach(function(r){
       h+='<div class="qitem" onclick="openEditor('+r.row+',\''+(r.employee_id||r.national_id||'')+'\')"><div>'+
-         '<div class="nm">'+(r.full_name_en||'(no name)')+'</div>'+
+         '<div class="nm">'+esc(r.full_name_en||'(no name)')+'</div>'+
          '<div class="meta">'+(r.employee_id||'no ID')+' &middot; '+r.record_status+'</div></div>'+
          '<span class="pill '+(parseInt(r.completeness)>=100?'verified':'pending')+'">'+(r.completeness||0)+'%</span></div>';
     });
     el('searchResults').innerHTML=h;
-  }).withFailureHandler(function(e){el('searchResults').innerHTML='<p class="sub" style="color:#c62828">'+e.message+'</p>';}).hrSearchEmployees(term);
+  }).withFailureHandler(function(e){el('searchResults').innerHTML='<p class="sub" style="color:#c62828">'+esc(e.message)+'</p>';}).hrSearchEmployees(term);
 }
 function empSearchEnter(ev){ if(ev.key==='Enter') doSearch(); }
 
@@ -940,13 +942,13 @@ var EDITOR_LOCKED=['employee_id','report_name','report_surname','completeness_%'
 function openEditor(row,key){
   hide('hrHome'); show('hrEditor');
   el('hrEditor').innerHTML='<p class="sub">Loading…</p>';
-  google.script.run.withSuccessHandler(renderEditor).withFailureHandler(function(e){el('hrEditor').innerHTML='<span style="color:#c62828">'+e.message+'</span>';}).hrGetRecord(row,key);
+  google.script.run.withSuccessHandler(renderEditor).withFailureHandler(function(e){el('hrEditor').innerHTML='<span style="color:#c62828">'+esc(e.message)+'</span>';}).hrGetRecord(row,key);
 }
 function renderEditor(rec){
   CURRENT=rec;
   var p=parseInt(rec['completeness_%'])||0;
   var h='<div class="wrap" style="padding-top:16px"><span class="back" onclick="closeEditor()">&larr; back to console</span>';
-  h+='<div class="card"><h2>'+(rec.full_name_en||'Record')+' &middot; '+(rec.employee_id||'no ID')+'</h2>';
+  h+='<div class="card"><h2>'+esc(rec.full_name_en||'Record')+' &middot; '+(rec.employee_id||'no ID')+'</h2>';
   h+='<div class="prog"><i style="width:'+p+'%"></i></div><p class="sub">'+p+'% complete</p>';
   if(rec.blocking_gaps&&rec.blocking_gaps.trim()) h+='<div class="gaps"><strong>Blocking payment:</strong> '+rec.blocking_gaps.trim().split(/\s+/).map(lbl).join(', ')+'</div>';
   if(rec.chase_gaps&&rec.chase_gaps.trim()) h+='<div class="gaps chase"><strong>Also missing:</strong> '+rec.chase_gaps.trim().split(/\s+/).map(lbl).join(', ')+'</div>';
@@ -1035,7 +1037,7 @@ function sgLoad(){
          d.people.length+' of '+r.per_day+' '+tag+'</p>';
       d.people.forEach(function(p){
         h+='<div class="qitem" style="align-items:flex-start;cursor:default"><div style="flex:1">'+
-           '<div class="nm">'+p.name+' &middot; '+p.employee_id+'</div>'+
+           '<div class="nm">'+esc(p.name)+' &middot; '+p.employee_id+'</div>'+
            '<div class="meta">'+(p.contract_type||'contract type not recorded')+' &middot; '+p.appointment_id+'</div>'+
            (p.docs_outstanding!==''&&Number(p.docs_outstanding)>0
               ? '<div class="meta" style="color:#8d6e00">'+p.docs_outstanding+' document(s) still missing — they can sign, but cannot take a copy away</div>'
@@ -1048,7 +1050,7 @@ function sgLoad(){
       });
     });
     el('sgList').innerHTML=h;
-  }).withFailureHandler(function(e){el('sgList').innerHTML='<p class="sub" style="color:#c62828">'+e.message+'</p>';})
+  }).withFailureHandler(function(e){el('sgList').innerHTML='<p class="sub" style="color:#c62828">'+esc(e.message)+'</p>';})
    .hrSigningAppointments();
 }
 function sgMark(row,outcome){
@@ -1074,14 +1076,14 @@ function usLoad(){
     USROWS.forEach(function(p,i){
       if(p.booked){
         h+='<div class="qitem" style="cursor:default;background:#f7f7ff"><div>'+
-           '<div class="nm">'+p.name+' &middot; '+p.employee_id+'</div>'+
+           '<div class="nm">'+esc(p.name)+' &middot; '+p.employee_id+'</div>'+
            '<div class="meta">'+(p.job_title||'')+(p.project?(' &middot; '+p.project):'')+'</div>'+
            '</div><span class="pill verified">booked '+p.booked+'</span></div>';
         return;
       }
       h+='<label class="qitem" style="cursor:pointer"><div style="display:flex;gap:10px;align-items:flex-start;flex:1">'+
          '<input type="checkbox" class="uspick" value="'+p.employee_id+'" style="margin-top:3px">'+
-         '<div><div class="nm">'+p.name+' &middot; '+p.employee_id+'</div>'+
+         '<div><div class="nm">'+esc(p.name)+' &middot; '+p.employee_id+'</div>'+
          '<div class="meta">'+(p.job_title||'')+(p.project?(' &middot; '+p.project):'')+'</div>'+
          '<div class="meta">Hired '+(p.hire_date||'—')+
            (p.days_since_hire!==''? (' &middot; '+p.days_since_hire+' days ago'):'')+
@@ -1091,7 +1093,7 @@ function usLoad(){
     });
     el('usList').innerHTML=h;
     show('usBtn');
-  }).withFailureHandler(function(e){el('usList').innerHTML='<p class="sub" style="color:#c62828">'+e.message+'</p>';})
+  }).withFailureHandler(function(e){el('usList').innerHTML='<p class="sub" style="color:#c62828">'+esc(e.message)+'</p>';})
    .hrUnsignedContracts();
 }
 function usTickAll(){
@@ -1116,7 +1118,7 @@ function renderBank(rows){
   if(!rows.length){el('bankList').innerHTML='<p class="sub">No bank details awaiting verification.</p>';return}
   var h='';rows.forEach(function(r){
     h+='<div class="qitem" style="align-items:flex-start"><div>'+
-       '<div class="nm">'+(r.full_name_en||'(no name)')+' &middot; '+(r.employee_id||'')+'</div>'+
+       '<div class="nm">'+esc(r.full_name_en||'(no name)')+' &middot; '+(r.employee_id||'')+'</div>'+
        '<div class="ro" style="margin-top:10px;min-width:340px">'+
          '<div class="row"><span class="k">Bank</span><span class="v">'+(r.bank_name||'—')+'</span></div>'+
          '<div class="row"><span class="k">Account number</span><span class="v">'+(r.account_number||'—')+'</span></div>'+
@@ -1150,7 +1152,7 @@ function renderTasks(rows){
   rows.forEach(function(r){
     var cls = r.missingCount===0 ? 'verified' : (r.missingCount<=3?'pending':'blocked');
     h+='<div class="qitem" onclick="openEditor('+r.row+',\''+(r.employee_id||r.national_id||'')+'\')"><div>'+
-       '<div class="nm">'+(r.full_name_en||'(no name)')+' &middot; '+(r.employee_id||'no ID')+'</div>'+
+       '<div class="nm">'+esc(r.full_name_en||'(no name)')+' &middot; '+(r.employee_id||'no ID')+'</div>'+
        '<div class="meta">'+r.reasons.join(' &middot; ')+'</div>'+
        (r.missing && r.missing.length ? '<div class="meta" style="color:#8d6e00">'+r.missing.map(lbl).join(', ')+'</div>' : '')+
        '</div>'+
@@ -1165,9 +1167,9 @@ function renderIntake(rows){
   var h='';rows.forEach(function(r){
     var flagged=r.review_status.indexOf('REVIEW')===0;
     var pill=flagged?'blocked':'verified';
-    h+='<div class="qitem"><div><div class="nm">'+(r.full_name_en||'(no name)')+'</div>'+
+    h+='<div class="qitem"><div><div class="nm">'+esc(r.full_name_en||'(no name)')+'</div>'+
        '<div class="meta">'+(r.intake_job_title||'')+' / '+(r.intake_account||'')+' &middot; '+r.national_id+'</div>'+
-       '<div class="meta">'+(r.id_check_note||'')+(r.dedup_flag?(' &middot; '+r.dedup_flag+' ('+r.previous_employee_id+')'):'')+'</div></div>'+
+       '<div class="meta">'+esc(r.id_check_note||'')+(r.dedup_flag?(' &middot; '+r.dedup_flag+' ('+r.previous_employee_id+')'):'')+'</div></div>'+
        '<div style="text-align:right"><span class="pill '+pill+'">'+r.review_status.replace("REVIEW - ","")+'</span><br>'+
        '<button class="ok" style="margin-top:8px;padding:7px 14px" onclick="approveIntake('+r._row+',\''+String(r.full_name_en).replace(/\x27/g,"")+'\')">Approve &amp; create</button>'+
        '<button class="ghost" style="margin-top:8px;padding:7px 10px" onclick="rejectIntake('+r._row+')">Reject</button></div></div>';
@@ -1189,7 +1191,7 @@ function renderHRList(rows){
   if(!rows.length){el('hrList').innerHTML='<p class="sub">No pending records. All caught up.</p>';return}
   var h='';rows.forEach(function(r){
     var st=r.record_status,pill=st==='Pending'?'pending':(st.indexOf('Blocked')>-1?'blocked':'verified');
-    h+='<div class="qitem" onclick="openHR('+r.row+')"><div><div class="nm">'+(r.full_name_en||'(no name)')+'</div>'+
+    h+='<div class="qitem" onclick="openHR('+r.row+')"><div><div class="nm">'+esc(r.full_name_en||'(no name)')+'</div>'+
        '<div class="meta">'+(r.employee_id||'no ID yet')+' &middot; '+r.national_id+'</div></div>'+
        '<span class="pill '+pill+'">'+st+'</span></div>';
   });
@@ -1205,7 +1207,7 @@ function openHR(row){
   if(r.record_status.indexOf('Blocked')>-1){
     h+='<div class="warnbox"><strong>Possible rehire.</strong> This national ID matches a closed record ('+(r.previous_employee_id||'?')+'). No ID has been issued. Resolve before proceeding.</div>';
   }
-  h+='<div class="card"><h2>'+(r.full_name_en||'New joiner')+'</h2>';
+  h+='<div class="card"><h2>'+esc(r.full_name_en||'New joiner')+'</h2>';
   // GATES
   h+='<div style="margin:10px 0">'+
      gate('Gate 1 — identity submitted',g1)+
@@ -1245,7 +1247,7 @@ function renderIT(rows){
   window._it=rows;
   if(!rows.length){el('itList').innerHTML='<p class="sub">No emails pending. All caught up.</p>';return}
   var h='';rows.forEach(function(r){
-    h+='<div class="qitem"><div><div class="nm">'+r.full_name_en+'</div><div class="meta">'+r.employee_id+' &middot; '+r.personal_email+'</div></div>'+
+    h+='<div class="qitem"><div><div class="nm">'+esc(r.full_name_en)+'</div><div class="meta">'+r.employee_id+' &middot; '+esc(r.personal_email)+'</div></div>'+
        '<div style="display:flex;gap:8px;align-items:center"><input id="it'+r.row+'" placeholder="name@konecta.com" style="padding:8px;border:1px solid #e3e3ee;border-radius:5px"><button onclick="setEmail('+r.row+')">Save</button></div></div>';
   });
   el('itList').innerHTML=h;
@@ -1259,7 +1261,7 @@ var LEAVEINFO=null, LVPICKER=[];
 
 function loadLeave(){
   google.script.run.withSuccessHandler(renderLeave).withFailureHandler(function(e){
-    el('leaveBal').innerHTML='<span style="color:#c62828">'+e.message+'</span>';
+    el('leaveBal').innerHTML='<span style="color:#c62828">'+esc(e.message)+'</span>';
   }).getMyLeaveInfo();
 }
 
@@ -1387,7 +1389,7 @@ function renderLeaveHistory(rows){
     h+='<div class="qitem"><div>'+
        '<div class="nm">'+r.leave_type+' &middot; '+(r.days_approved||r.days_requested)+' day(s)</div>'+
        '<div class="meta">'+r.start_date+' to '+r.end_date+' &middot; '+r.request_id+'</div>'+
-       (r.reason?('<div class="meta">'+r.reason+'</div>'):'')+
+       (r.reason?('<div class="meta">'+esc(r.reason)+'</div>'):'')+
        '</div><span class="pill '+cls+'">'+st+'</span></div>';
   });
   el('lvHistory').innerHTML=h;
@@ -1396,7 +1398,7 @@ function renderLeaveHistory(rows){
 // ===================== LEAVE APPROVALS (manager) =====================
 function loadApprovals(){
   google.script.run.withSuccessHandler(renderApprovals).withFailureHandler(function(e){
-    el('apprList').innerHTML='<p class="sub">'+e.message+'</p>';
+    el('apprList').innerHTML='<p class="sub">'+esc(e.message)+'</p>';
   }).getLeaveApprovals();
 }
 function renderApprovals(res){
@@ -1417,9 +1419,9 @@ function renderApprovals(res){
     });
     boxes+='</div>';
     h+='<div class="qitem" style="align-items:flex-start;cursor:default"><div style="flex:1">'+
-       '<div class="nm">'+r.employee_name+' &middot; '+r.leave_type+'</div>'+
+       '<div class="nm">'+esc(r.employee_name)+' &middot; '+r.leave_type+'</div>'+
        '<div class="meta">'+r.start_date+' to '+r.end_date+' &middot; '+r.days_requested+' day(s) requested &middot; '+r.request_id+'</div>'+
-       (r.reason?('<div class="meta">Reason: '+r.reason+'</div>'):'')+
+       (r.reason?('<div class="meta">Reason: '+esc(r.reason)+'</div>'):'')+
        (r.role==='dotted'?('<div class="meta" style="color:#8d6e00">Direct manager approved these '+r.direct_days+' day(s). You can approve fewer, not more.</div>'):'')+
        (r.on_behalf?('<div class="meta" style="color:#8d6e00">You are acting on behalf of '+r.acting_as+'.</div>'):'')+
        '<p class="sub" style="margin:12px 0 0"><strong>Untick any day you cannot approve.</strong></p>'+
@@ -1453,7 +1455,7 @@ function decide(row,what){
 // ===================== LEAVE VALIDATION (HR) =====================
 function loadHRLeave(){
   google.script.run.withSuccessHandler(renderHRLeave).withFailureHandler(function(e){
-    el('hrLeaveList').innerHTML='<p class="sub">'+e.message+'</p>';
+    el('hrLeaveList').innerHTML='<p class="sub">'+esc(e.message)+'</p>';
   }).hrGetLeaveToValidate();
 }
 function renderHRLeave(rows){
@@ -1462,10 +1464,10 @@ function renderHRLeave(rows){
   var h='';
   rows.forEach(function(r){
     h+='<div class="qitem" style="align-items:flex-start;cursor:default"><div style="flex:1">'+
-       '<div class="nm">'+r.employee_name+' &middot; '+r.leave_type+'</div>'+
+       '<div class="nm">'+esc(r.employee_name)+' &middot; '+r.leave_type+'</div>'+
        '<div class="meta">'+r.start_date+' to '+r.end_date+' &middot; '+r.days_requested+' day(s) &middot; '+r.request_id+'</div>'+
        (r.document_needed?('<div class="meta" style="color:#8d6e00">Document required: '+r.document_needed+'</div>'):'')+
-       (r.reason?('<div class="meta">Reason: '+r.reason+'</div>'):'')+
+       (r.reason?('<div class="meta">Reason: '+esc(r.reason)+'</div>'):'')+
        '<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">'+
          '<label style="font-size:12px;color:#6b6b80">Days to validate</label>'+
          '<input type="number" id="hv'+r.row+'" value="'+r.days_requested+'" min="0" max="'+r.days_requested+'" style="width:70px;padding:6px;border:1px solid #e3e3ee;border-radius:5px">'+
@@ -1501,13 +1503,13 @@ function obLookup(){
       el('obType').innerHTML='<option value=""></option>';
       return;
     }
-    el('obWho').innerHTML='<strong>'+r.name+'</strong><br>'+
+    el('obWho').innerHTML='<strong>'+esc(r.name)+'</strong><br>'+
       r.annual_remaining+' day(s) annual left &middot; week off: '+r.weekend_pattern;
     var o='<option value=""></option>';
     (r.types||[]).forEach(function(t){ o+='<option value="'+t.type+'">'+t.type+'</option>'; });
     el('obType').innerHTML=o;
   }).withFailureHandler(function(e){
-    el('obWho').innerHTML='<span style="color:#c62828">'+e.message+'</span>';
+    el('obWho').innerHTML='<span style="color:#c62828">'+esc(e.message)+'</span>';
   }).lookupEmployeeForLeave(id);
 }
 
@@ -1589,7 +1591,7 @@ function obSubmit(){
 // ---------- delegation ----------
 function loadDelegates(){
   google.script.run.withSuccessHandler(renderDelegates).withFailureHandler(function(e){
-    el('delCurrent').innerHTML='<p class="sub">'+e.message+'</p>';
+    el('delCurrent').innerHTML='<p class="sub">'+esc(e.message)+'</p>';
   }).getDelegateOptions();
 }
 function renderDelegates(d){
@@ -1610,9 +1612,9 @@ function renderDelegates(d){
       if(term.length<2){ el('delSearchOut').innerHTML=''; return; }
       google.script.run.withSuccessHandler(function(rows){
         el('delSearchOut').innerHTML = rows.length
-          ? rows.map(function(m){ return '<div class="qitem" style="cursor:pointer;padding:8px 10px" onclick="delPick(\''+esc(m.email)+'\',\''+esc(m.label)+'\')">'+h(m.label)+'</div>'; }).join('')
+          ? rows.map(function(m){ return '<div class="qitem" style="cursor:pointer;padding:8px 10px" onclick="delPick(\''+esc(m.email)+'\',\''+esc(m.label)+'\')">'+esc(m.label)+'</div>'; }).join('')
           : '<p class="sub">No match.</p>';
-      }).withFailureHandler(function(e){ el('delSearchOut').innerHTML='<p class="sub">'+h(e.message)+'</p>'; }).delegateSearch(term);
+      }).withFailureHandler(function(e){ el('delSearchOut').innerHTML='<p class="sub">'+esc(e.message)+'</p>'; }).delegateSearch(term);
     };
   }
   var cur=(d.current||[]).filter(function(x){return String(x.active).toLowerCase()==='yes';});
@@ -1623,7 +1625,7 @@ function renderDelegates(d){
     var w = (c.from_date||c.to_date) ? ((c.from_date||'now')+' to '+(c.to_date||'further notice')) : 'until you end it';
     h+='<div class="qitem" style="cursor:default"><div>'+
        '<div class="nm">'+c.delegate_email+'</div>'+
-       '<div class="meta">'+w+(c.note?(' &middot; '+c.note):'')+'</div></div>'+
+       '<div class="meta">'+w+(c.note?(' &middot; '+esc(c.note)):'')+'</div></div>'+
        '<button class="ghost" style="padding:6px 12px" onclick="endDel('+c.row+')">End</button></div>';
   });
   el('delCurrent').innerHTML=h;
@@ -1666,7 +1668,7 @@ function loadMyPayslip(period){
     }
     fetchPayslip(period||PSLIP_PERIODS[0]);
   }).withFailureHandler(function(e){
-    el('payslipBody').innerHTML='<div class="card"><p class="sub" style="color:#c62828">'+e.message+'</p></div>';
+    el('payslipBody').innerHTML='<div class="card"><p class="sub" style="color:#c62828">'+esc(e.message)+'</p></div>';
   }).listPayslipPeriods();
 }
 
@@ -1675,7 +1677,7 @@ function fetchPayslip(period){
     .withFailureHandler(function(e){
       el('payslipBody').innerHTML='<div class="card"><h2>My payslip</h2>'+
         periodPicker(period)+
-        '<p class="sub" style="color:#c62828;margin-top:10px">'+e.message+'</p></div>';
+        '<p class="sub" style="color:#c62828;margin-top:10px">'+esc(e.message)+'</p></div>';
     }).getMyPayslip(period);
 }
 
@@ -1717,7 +1719,7 @@ function renderPayslip(d, period){
   var h='<div class="card"><h2>My payslip</h2>'+periodPicker(period)+
     '<p class="sub">'+prettyPeriod(period)+' &middot; '+(d.workingDays||0)+' working days</p>'+
     '<div class="ro">'+
-    '<div class="row"><span class="k">Name</span><span class="v">'+(d.name||'—')+'</span></div>'+
+    '<div class="row"><span class="k">Name</span><span class="v">'+esc(d.name||'—')+'</span></div>'+
     '<div class="row"><span class="k">Employee ID</span><span class="v">'+(d.employeeId||'—')+'</span></div>'+
     '<div class="row"><span class="k">Job title</span><span class="v">'+(d.jobTitle||'—')+'</span></div>'+
     '</div></div>';
@@ -1725,7 +1727,7 @@ function renderPayslip(d, period){
   h+='<div class="card"><h2>What you earned</h2><div class="ro">';
   (d.earnings||[]).forEach(function(e){
     h+='<div class="row"><span class="k">'+e.label+
-       (e.note?'<br><span style="font-size:11px;color:#6b6b80;font-weight:normal">'+e.note+'</span>':'')+
+       (e.note?'<br><span style="font-size:11px;color:#6b6b80;font-weight:normal">'+esc(e.note)+'</span>':'')+
        '</span><span class="v">'+psMoney(e.amount)+'</span></div>';
   });
   h+='<div class="row" style="border-top:2px solid #2800C8;margin-top:4px;padding-top:8px">'+
@@ -1735,7 +1737,7 @@ function renderPayslip(d, period){
   h+='<div class="card"><h2>What was deducted</h2><div class="ro">';
   (d.deductions||[]).forEach(function(x){
     h+='<div class="row"><span class="k">'+x.label+
-       (x.note?'<br><span style="font-size:11px;color:#6b6b80;font-weight:normal">'+x.note+'</span>':'')+
+       (x.note?'<br><span style="font-size:11px;color:#6b6b80;font-weight:normal">'+esc(x.note)+'</span>':'')+
        '</span><span class="v">'+psMoney(x.amount)+'</span></div>';
   });
   h+='<div class="row" style="border-top:2px solid #2800C8;margin-top:4px;padding-top:8px">'+
@@ -1761,7 +1763,7 @@ function renderPayslip(d, period){
 function loadMyContract(){
   el('contractBody').innerHTML='<div class="card"><p class="sub">Loading…</p></div>';
   google.script.run.withSuccessHandler(renderMyContract).withFailureHandler(function(e){
-    el('contractBody').innerHTML='<div class="card"><p class="sub" style="color:#c62828">'+e.message+'</p></div>';
+    el('contractBody').innerHTML='<div class="card"><p class="sub" style="color:#c62828">'+esc(e.message)+'</p></div>';
   }).getMyContract();
 }
 function renderMyContract(d){
@@ -1809,7 +1811,7 @@ if(d.non_employee){
       var ok=x.status==='Received';
       h+='<div style="padding:8px;border:1px solid '+(ok?'#a5d6a7':'#e3e3ee')+
          ';background:'+(ok?'#f4fbf4':'#fff')+';border-radius:6px;font-size:13px">'+
-         (ok? '&#10003; ' : '&#9675; ')+x.no+'. '+x.name+
+         (ok? '&#10003; ' : '&#9675; ')+x.no+'. '+esc(x.name)+
          (x.optional? ' <span style="color:#8d6e00;font-size:11px">(only if it applies)</span>':'')+
          '</div>';
     });
@@ -1896,7 +1898,7 @@ function runSikCheck(){
     if(r.noRecord && r.noRecord.length){
       h+='<div class="warnbox" style="border-color:#ef9a9a;background:#ffebee;color:#c62828">'+
          '<strong>In payroll but not on the employee sheet ('+r.noRecord.length+')</strong><br>'+
-         r.noRecord.map(function(x){return x.employee_id+' — '+x.name;}).join('<br>')+'</div>';
+         r.noRecord.map(function(x){return x.employee_id+' — '+esc(x.name);}).join('<br>')+'</div>';
     }
     if(r.fields && r.fields.length){
       h+='<p class="sub" style="margin:14px 0 6px"><strong>What is missing, and for how many people</strong></p>'+
@@ -1910,7 +1912,7 @@ function runSikCheck(){
       h+='<p class="sub" style="margin:16px 0 6px"><strong>Records to fix</strong> — click to open</p>';
       r.people.forEach(function(p){
         h+='<div class="qitem" onclick="sikOpen(\''+p.employee_id+'\')"><div>'+
-           '<div class="nm">'+p.employee_id+' &middot; '+(p.name||'(no name)')+
+           '<div class="nm">'+p.employee_id+' &middot; '+esc(p.name||'(no name)')+
            (p.leaver?' <span class="pill pending">left this month</span>':'')+'</div>'+
            '<div class="meta" style="color:#c62828">'+p.missing.join(', ')+'</div>'+
            (p.optional && p.optional.length? '<div class="meta">also blank: '+p.optional.join(', ')+'</div>':'')+
@@ -2003,10 +2005,10 @@ function buPreview(){
               : '<span class="pill verified">will change</span>';
       h+='<tr style="background:'+bg+';border-bottom:1px solid #e3e3ee">'+
          '<td style="padding:6px">'+r.employee_id+'</td>'+
-         '<td style="padding:6px">'+(r.name||'—')+'</td>'+
+         '<td style="padding:6px">'+esc(r.name||'—')+'</td>'+
          '<td style="padding:6px;color:#6b6b80">'+(r.current||'—')+'</td>'+
          '<td style="padding:6px;font-weight:bold">'+r.proposed+'</td>'+
-         '<td style="padding:6px">'+tag+(r.note?('<br><span style="font-size:11px;color:#c62828">'+r.note+'</span>'):'')+'</td></tr>';
+         '<td style="padding:6px">'+tag+(r.note?('<br><span style="font-size:11px;color:#c62828">'+esc(r.note)+'</span>'):'')+'</td></tr>';
     });
     el('buOut').innerHTML=h+'</table></div>';
     if(res.willChange) show('buApply'); else hide('buApply');
@@ -2054,11 +2056,11 @@ function lvbPreview(){
               : '<span class="pill verified">will close</span>';
       h+='<tr style="background:'+bg+';border-bottom:1px solid #e3e3ee">'+
          '<td style="padding:6px">'+r.employee_id+'</td>'+
-         '<td style="padding:6px">'+(r.name||'—')+'</td>'+
+         '<td style="padding:6px">'+esc(r.name||'—')+'</td>'+
          '<td style="padding:6px;color:#6b6b80">'+(r.current_status||'—')+'</td>'+
          '<td style="padding:6px">'+r.exit_date+'</td>'+
          '<td style="padding:6px">'+r.exit_type+'</td>'+
-         '<td style="padding:6px">'+tag+(r.note?('<br><span style="font-size:11px;color:#c62828">'+r.note+'</span>'):'')+'</td></tr>';
+         '<td style="padding:6px">'+tag+(r.note?('<br><span style="font-size:11px;color:#c62828">'+esc(r.note)+'</span>'):'')+'</td></tr>';
     });
     el('lvbOut').innerHTML=h+'</table></div>';
     if(res.willChange) show('lvbApply'); else hide('lvbApply');
@@ -2113,7 +2115,7 @@ function ctCheck(){
   google.script.run.withSuccessHandler(function(r){
     if(!r.found){ el('ctWho').innerHTML='<p class="sub" style="color:#c62828">'+(r.msg||'Not found')+'</p>'; return; }
     var h='<div class="ro">'+
-      '<div class="row"><span class="k">Name</span><span class="v">'+r.name+'</span></div>'+
+      '<div class="row"><span class="k">Name</span><span class="v">'+esc(r.name)+'</span></div>'+
       '<div class="row"><span class="k">Contract type on record</span><span class="v">'+(r.contract_type_on_record||'—')+'</span></div>'+
       '<div class="row"><span class="k">Hire date</span><span class="v">'+(r.hire_date||'—')+'</span></div></div>';
     if(t && r.contract_type_on_record && t!==r.contract_type_on_record){
@@ -2127,7 +2129,7 @@ function ctCheck(){
       h+='<p class="sub" style="color:#2e7d32;margin-top:10px">Everything the contract needs is on the record.</p>';
     }
     el('ctWho').innerHTML=h;
-  }).withFailureHandler(function(e){el('ctWho').innerHTML='<p class="sub" style="color:#c62828">'+e.message+'</p>';})
+  }).withFailureHandler(function(e){el('ctWho').innerHTML='<p class="sub" style="color:#c62828">'+esc(e.message)+'</p>';})
    .contractPreflight(id,t);
 }
 function ctGenerate(){
@@ -2161,7 +2163,7 @@ function loadCareer(){
   google.script.run.withSuccessHandler(function(d){
     if(!d.found){ el('chOut').innerHTML='<p class="sub" style="color:#c62828">'+(d.msg||'Not found')+'</p>'; return; }
     var h='<div class="ro" style="margin-bottom:14px">'+
-      '<div class="row"><span class="k">Name</span><span class="v">'+d.name+'</span></div>'+
+      '<div class="row"><span class="k">Name</span><span class="v">'+esc(d.name)+'</span></div>'+
       '<div class="row"><span class="k">Now</span><span class="v">'+(d.current.job_title||'—')+
         (d.current.grade?(' &middot; '+d.current.grade):'')+'</span></div>'+
       '<div class="row"><span class="k">Service</span><span class="v">'+d.months_service+' months</span></div>'+
@@ -2181,7 +2183,7 @@ function loadCareer(){
       h+='</div>'+tag+'</div>';
     });
     el('chOut').innerHTML=h;
-  }).withFailureHandler(function(e){el('chOut').innerHTML='<p class="sub" style="color:#c62828">'+e.message+'</p>';})
+  }).withFailureHandler(function(e){el('chOut').innerHTML='<p class="sub" style="color:#c62828">'+esc(e.message)+'</p>';})
    .careerHistory(id);
 }
 
@@ -2195,7 +2197,7 @@ function fillHolidayDates(){
   if(el('holDate').options.length) return;
   google.script.run.withSuccessHandler(function(list){
     var o='<option value=""></option>';
-    (list||[]).forEach(function(h){ o+='<option value="'+h.date+'">'+h.date+' — '+h.name+'</option>'; });
+    (list||[]).forEach(function(h){ o+='<option value="'+h.date+'">'+h.date+' — '+esc(h.name)+'</option>'; });
     el('holDate').innerHTML=o;
   }).getHolidayList();
 }
@@ -2230,14 +2232,14 @@ function loadLiability(){
     var h='<p class="sub"><strong>'+res.totalDays+' day(s)</strong> across '+res.rows.length+' employee(s) in '+res.year+'.</p>';
     res.rows.forEach(function(r){
       h+='<div class="qitem" style="cursor:default;align-items:flex-start"><div>'+
-         '<div class="nm">'+r.name+' &middot; '+r.employee_id+'</div>';
+         '<div class="nm">'+esc(r.name)+' &middot; '+r.employee_id+'</div>';
       r.requests.forEach(function(q){
         h+='<div class="meta">'+q.dates+' — '+q.rejected+' day(s) refused'+(q.by?(' by '+q.by):'')+(q.when?(' on '+q.when):'')+'</div>';
       });
       h+='</div><span class="pill blocked">'+r.days+' day(s)</span></div>';
     });
     el('liabOut').innerHTML=h;
-  }).withFailureHandler(function(e){el('liabOut').innerHTML='<p class="sub" style="color:#c62828">'+e.message+'</p>';})
+  }).withFailureHandler(function(e){el('liabOut').innerHTML='<p class="sub" style="color:#c62828">'+esc(e.message)+'</p>';})
    .hrRejectedDaysReport(new Date().getFullYear());
 }
 
@@ -2265,21 +2267,21 @@ function loadAttrition(){
     h+='<p class="sub" style="margin:16px 0 6px"><strong>Individual leavers</strong></p>';
     r.leavers.forEach(function(l){
       h+='<div class="qitem" style="cursor:default"><div>'+
-         '<div class="nm">'+l.name+' &middot; '+l.employee_id+'</div>'+
+         '<div class="nm">'+esc(l.name)+' &middot; '+l.employee_id+'</div>'+
          '<div class="meta">'+(l.job_title||'')+(l.project?(' &middot; '+l.project):'')+'</div>'+
          '<div class="meta">'+l.hire_date+' to '+l.exit_date+
          (l.tenure_months!==''?(' &middot; '+l.tenure_months+' months'):'')+'</div></div>'+
          '<span class="pill blocked">'+l.exit_type+'</span></div>';
     });
     el('attrOut').innerHTML=h;
-  }).withFailureHandler(function(e){el('attrOut').innerHTML='<p class="sub" style="color:#c62828">'+e.message+'</p>';})
+  }).withFailureHandler(function(e){el('attrOut').innerHTML='<p class="sub" style="color:#c62828">'+esc(e.message)+'</p>';})
    .hrAttritionReport(el('attrYear').value);
 }
 
 // ===================== RESIGNATION (employee) =====================
 function loadResignation(){
   google.script.run.withSuccessHandler(renderResignation).withFailureHandler(function(e){
-    el('resignBody').innerHTML='<div class="card"><p class="sub" style="color:#c62828">'+e.message+'</p></div>';
+    el('resignBody').innerHTML='<div class="card"><p class="sub" style="color:#c62828">'+esc(e.message)+'</p></div>';
   }).getMyResignation();
 }
 function renderResignation(info){
@@ -2361,7 +2363,7 @@ function doWithdraw(){
 // ===================== RESIGNATION (manager) =====================
 function loadResignApprovals(){
   google.script.run.withSuccessHandler(renderResignApprovals).withFailureHandler(function(e){
-    el('rsList').innerHTML='<p class="sub">'+e.message+'</p>';
+    el('rsList').innerHTML='<p class="sub">'+esc(e.message)+'</p>';
   }).getResignationApprovals();
 }
 function renderResignApprovals(res){
@@ -2371,7 +2373,7 @@ function renderResignApprovals(res){
   res.items.forEach(function(r){
     if(r.isWithdrawal){
       h+='<div class="qitem" style="align-items:flex-start;cursor:default"><div style="flex:1">'+
-         '<div class="nm">'+r.employee_name+' — wants to withdraw</div>'+
+         '<div class="nm">'+esc(r.employee_name)+' — wants to withdraw</div>'+
          '<div class="meta">Resigned '+r.days_since+' days ago &middot; last day was '+(r.agreed_last_day||r.proposed_last_day)+'</div>'+
          (r.withdraw_reason?('<div class="meta">Their reason: '+r.withdraw_reason+'</div>'):'')+
          '<input id="wc'+r.row+'" placeholder="Comment (optional)" style="width:100%;margin-top:8px;padding:6px;border:1px solid #e3e3ee;border-radius:5px"></div>'+
@@ -2384,9 +2386,9 @@ function renderResignApprovals(res){
     var mine = r.role==='direct'? r.direct_date : r.dotted_date;
     var other= r.role==='direct'? r.dotted_date : r.direct_date;
     h+='<div class="qitem" style="align-items:flex-start;cursor:default"><div style="flex:1">'+
-       '<div class="nm">'+r.employee_name+' &middot; '+r.employee_id+'</div>'+
+       '<div class="nm">'+esc(r.employee_name)+' &middot; '+r.employee_id+'</div>'+
        '<div class="meta">Proposed last working day: <strong>'+r.proposed_last_day+'</strong></div>'+
-       (r.reason?('<div class="meta">Reason: '+r.reason+'</div>'):'')+
+       (r.reason?('<div class="meta">Reason: '+esc(r.reason)+'</div>'):'')+
        '<div class="meta">Resigned '+r.days_since+' day(s) ago</div>'+
        (mine?('<div class="meta" style="color:#2e7d32">You proposed '+mine+'</div>'):'')+
        (other?('<div class="meta" style="color:#8d6e00">The other manager proposed '+other+'</div>'):'')+
@@ -2426,7 +2428,7 @@ function decideWd(row,accept){
 var CLTASKS=null;
 function loadClearance(target){
   google.script.run.withSuccessHandler(function(res){ CLTASKS=res; renderClearance(target); })
-   .withFailureHandler(function(e){ var t=el('clList'+(target||'')); if(t) t.innerHTML='<p class="sub">'+e.message+'</p>'; })
+   .withFailureHandler(function(e){ var t=el('clList'+(target||'')); if(t) t.innerHTML='<p class="sub">'+esc(e.message)+'</p>'; })
    .getMyClearanceTasks();
 }
 function renderClearance(target){
@@ -2442,7 +2444,7 @@ function renderClearance(target){
   var h='';
   rows.forEach(function(r){
     h+='<div class="qitem" style="align-items:flex-start;cursor:default"><div style="flex:1">'+
-       '<div class="nm">'+r.employee_name+' &middot; '+r.employee_id+'</div>'+
+       '<div class="nm">'+esc(r.employee_name)+' &middot; '+r.employee_id+'</div>'+
        '<div class="meta">Last working day: '+(r.last_working_day||'TBC')+' &middot; '+r.clearance_id+'</div>';
     if(want==='handover'){
       h+='<p class="sub" style="margin:10px 0 4px">Confirm all handover activities are complete. '+
@@ -2545,7 +2547,7 @@ function lookupNoShow(){
   if(!id){ el('nsWho').innerHTML=''; return; }
   google.script.run.withSuccessHandler(function(r){
     if(!r.found){ el('nsWho').innerHTML='<span style="color:#c62828">'+(r.msg||'Not found')+'</span>'; return; }
-    el('nsWho').innerHTML='<strong>'+r.name+'</strong><br>'+(r.job_title||'')+
+    el('nsWho').innerHTML='<strong>'+esc(r.name)+'</strong><br>'+(r.job_title||'')+
       (r.project?(' &middot; '+r.project):'')+'<br>Status: '+r.status;
   }).lookupEmployeeForNoShow(id);
 }
@@ -2570,11 +2572,11 @@ function loadNoShows(){
     var h='';
     rows.forEach(function(r){
       h+='<div class="qitem" style="align-items:flex-start;cursor:default"><div style="flex:1">'+
-         '<div class="nm">'+r.employee_name+' &middot; '+r.employee_id+'</div>'+
+         '<div class="nm">'+esc(r.employee_name)+' &middot; '+r.employee_id+'</div>'+
          '<div class="meta">'+(r.event_type||'No show')+' &middot; from '+r.absent_since+(r.days_absent!==''?(' — '+r.days_absent+' day(s)'):'')+'</div>'+
-         (r.leaving_reason?('<div class="meta">Reason: '+r.leaving_reason+(r.reason_detail?(' — '+r.reason_detail):'')+'</div>'):'')+
+         (r.leaving_reason?('<div class="meta">Reason: '+esc(r.leaving_reason)+(r.reason_detail?(' — '+esc(r.reason_detail)):'')+'</div>'):'')+
          '<div class="meta">Reported by '+(r.reporter_name||r.reported_by)+' &middot; '+r.noshow_id+'</div>'+
-         (r.last_seen_note?('<div class="meta">'+r.last_seen_note+'</div>'):'')+
+         (r.last_seen_note?('<div class="meta">'+esc(r.last_seen_note)+'</div>'):'')+
          '<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">'+
            '<select id="no'+r.row+'" style="padding:6px;border:1px solid #e3e3ee;border-radius:5px">'+
              '<option>Returned to work</option><option>Proceeding to termination</option>'+
@@ -2586,7 +2588,7 @@ function loadNoShows(){
          '<button class="ok" style="margin-top:8px;padding:7px 14px" onclick="resolveNs('+r.row+')">Resolve</button></div></div>';
     });
     el('nsHrList').innerHTML=h;
-  }).withFailureHandler(function(e){el('nsHrList').innerHTML='<p class="sub">'+e.message+'</p>';}).hrGetNoShows();
+  }).withFailureHandler(function(e){el('nsHrList').innerHTML='<p class="sub">'+esc(e.message)+'</p>';}).hrGetNoShows();
 }
 function resolveNs(row){
   var o=el('no'+row).value;
@@ -2611,7 +2613,7 @@ function lookupTerm(){
         ? '<br><span style="color:#2e7d32">In probation — '+c.probation.daysLeft+' day(s) left to decide</span>'
         : '<br><span style="color:#c62828">Probation window closed '+Math.abs(c.probation.daysLeft)+' day(s) ago — they are confirmed</span>';
     }
-    el('tmWho').innerHTML='<strong>'+c.name+'</strong><br>'+(c.job_title||'')+
+    el('tmWho').innerHTML='<strong>'+esc(c.name)+'</strong><br>'+(c.job_title||'')+
       (c.project?(' &middot; '+c.project):'')+'<br>Hired '+c.hire_date+probation;
     var o='<option value=""></option>';
     (c.reasons||[]).forEach(function(r){ o+='<option>'+r+'</option>'; });
@@ -2663,18 +2665,18 @@ function loadTerminations(){
     var h='';
     rows.forEach(function(r){
       h+='<div class="qitem" style="align-items:flex-start;cursor:default"><div style="flex:1">'+
-         '<div class="nm">'+r.employee_name+' &middot; '+r.employee_id+'</div>'+
-         '<div class="meta">'+r.reason+' &middot; raised by '+r.initiated_by+' &middot; '+r.termination_id+'</div>'+
+         '<div class="nm">'+esc(r.employee_name)+' &middot; '+r.employee_id+'</div>'+
+         '<div class="meta">'+esc(r.reason)+' &middot; raised by '+r.initiated_by+' &middot; '+r.termination_id+'</div>'+
          (r.proposed_last_day?('<div class="meta">Proposed last day: '+r.proposed_last_day+'</div>'):'')+
-         (r.details?('<div class="meta">'+r.details+'</div>'):'')+
-         (r.evidence_note?('<div class="ro" style="margin-top:8px"><div class="row"><span class="k">Evidence</span><span class="v" style="text-align:right;max-width:60%">'+r.evidence_note+'</span></div></div>'):'')+
+         (r.details?('<div class="meta">'+esc(r.details)+'</div>'):'')+
+         (r.evidence_note?('<div class="ro" style="margin-top:8px"><div class="row"><span class="k">Evidence</span><span class="v" style="text-align:right;max-width:60%">'+esc(r.evidence_note)+'</span></div></div>'):'')+
          '<input id="tn'+r.row+'" placeholder="Your note" style="width:100%;margin-top:8px;padding:6px;border:1px solid #e3e3ee;border-radius:5px"></div>'+
          '<div style="text-align:right;margin-left:12px;white-space:nowrap">'+
          '<button class="ok" style="padding:7px 14px" onclick="decideTerm('+r.row+',true)">Approve</button><br>'+
          '<button class="ghost" style="margin-top:6px;padding:6px 12px" onclick="decideTerm('+r.row+',false)">Reject</button></div></div>';
     });
     el('tmHrList').innerHTML=h;
-  }).withFailureHandler(function(e){el('tmHrList').innerHTML='<p class="sub">'+e.message+'</p>';}).hrGetTerminations();
+  }).withFailureHandler(function(e){el('tmHrList').innerHTML='<p class="sub">'+esc(e.message)+'</p>';}).hrGetTerminations();
 }
 function decideTerm(row,approve){
   if(!confirm(approve? 'Approve this termination? Payment will be held and clearance opened.'
@@ -2701,7 +2703,7 @@ function openFileReview(){
   if(!id){ msg('frMsg','Enter an employee ID.','err'); return; }
   el('frBody').innerHTML='<p class="sub">Loading…</p>';
   google.script.run.withSuccessHandler(renderFileReview).withFailureHandler(function(e){
-    el('frBody').innerHTML='<p class="sub" style="color:#c62828">'+e.message+'</p>';
+    el('frBody').innerHTML='<p class="sub" style="color:#c62828">'+esc(e.message)+'</p>';
   }).getFileReview(id);
 }
 function renderFileReview(d){
@@ -2709,7 +2711,7 @@ function renderFileReview(d){
   FRDATA=d;
   var r=d.review||{};
   var h='<div class="ro" style="margin-bottom:14px">'+
-    '<div class="row"><span class="k">Name</span><span class="v">'+d.name+'</span></div>'+
+    '<div class="row"><span class="k">Name</span><span class="v">'+esc(d.name)+'</span></div>'+
     '<div class="row"><span class="k">Hired</span><span class="v">'+d.hire_date+' ('+(d.months_service||0)+' months)</span></div>'+
     '<div class="row"><span class="k">Job title</span><span class="v">'+(d.job_title||'—')+'</span></div>'+
     '<div class="row"><span class="k">Employment relationship</span><span class="v">'+(d.company_type||'—')+'</span></div>'+
@@ -2740,8 +2742,8 @@ function renderFileReview(d){
       var checked = x.status==='Received' ? ' checked':'';
       h+='<label style="display:flex;gap:8px;align-items:flex-start;padding:8px;border:1px solid #e3e3ee;border-radius:6px;font-size:13px;cursor:pointer">'+
          '<input type="checkbox" class="frdoc" data-no="'+x.no+'"'+checked+' style="margin-top:2px">'+
-         '<span>'+x.no+'. '+x.name+
-         (x.optional? '<br><span style="color:#8d6e00;font-size:11px">'+x.note+'</span>':'')+
+         '<span>'+x.no+'. '+esc(x.name)+
+         (x.optional? '<br><span style="color:#8d6e00;font-size:11px">'+esc(x.note)+'</span>':'')+
          '</span></label>';
     });
     h+='</div>';
@@ -2818,7 +2820,7 @@ function loadMedicalOutstanding(){
     var h='<p class="sub" style="color:#c62828;font-weight:bold">'+rows.length+' leaver(s) still on cover</p>';
     rows.forEach(function(r){
       h+='<div class="qitem" style="cursor:default"><div>'+
-         '<div class="nm">'+r.name+' &middot; '+r.employee_id+'</div>'+
+         '<div class="nm">'+esc(r.name)+' &middot; '+r.employee_id+'</div>'+
          '<div class="meta">'+r.status+' &middot; last day '+r.last_working_day+
          (r.days_since!==''? (' — '+r.days_since+' day(s) ago'):'')+'</div></div>'+
          '<button class="ghost" style="padding:6px 12px" onclick="quickRemove(\''+r.employee_id+'\')">Stop cover</button></div>';
@@ -2869,7 +2871,7 @@ function hrLookupNs(){
   if(!id){ el('hrNsWho').innerHTML=''; return; }
   google.script.run.withSuccessHandler(function(r){
     el('hrNsWho').innerHTML = r.found
-      ? ('<strong>'+r.name+'</strong><br>'+(r.job_title||'')+'<br>Status: '+r.status)
+      ? ('<strong>'+esc(r.name)+'</strong><br>'+(r.job_title||'')+'<br>Status: '+r.status)
       : ('<span style="color:#c62828">'+(r.msg||'Not found')+'</span>');
   }).lookupEmployeeForNoShow(id);
 }

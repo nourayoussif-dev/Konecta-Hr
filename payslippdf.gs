@@ -71,7 +71,7 @@ function payslipHtml_(d, period) {
   var NAVY = '#2800C8';
   function rows(list) {
     return (list || []).map(function(x) {
-      return '<tr><td class="lbl">' + x.label +
+      return '<tr><td class="lbl">' + escapeHtml_(x.label) +
              (x.note ? '<div class="note">' + x.note + '</div>' : '') +
              '</td><td class="amt">' + psMoneyPdf_(x.amount) + '</td></tr>';
     }).join('');
@@ -102,9 +102,9 @@ function payslipHtml_(d, period) {
   '<p class="sub">Payslip for ' + prettyPeriodPdf_(period) + '</p>' +
 
   '<table class="meta">' +
-  '<tr><td>Name</td><td>' + (d.name || '—') + '</td></tr>' +
+  '<tr><td>Name</td><td>' + escapeHtml_(d.name || '—') + '</td></tr>' +
   '<tr><td>Employee ID</td><td>' + (d.employeeId || '—') + '</td></tr>' +
-  '<tr><td>Job title</td><td>' + (d.jobTitle || '—') + '</td></tr>' +
+  '<tr><td>Job title</td><td>' + escapeHtml_(d.jobTitle || '—') + '</td></tr>' +
   '<tr><td>Working days</td><td>' + (d.workingDays || 0) + '</td></tr>' +
   '</table>' +
 
@@ -122,7 +122,7 @@ function payslipHtml_(d, period) {
   '<span class="v">' + psMoneyPdf_(d.netSalary) + ' EGP</span>' +
   '<div style="clear:both"></div>' +
   '<div style="color:#666;font-size:9pt;margin-top:6px">' +
-  (d.bankName || '') + (d.accountMasked ? ' &middot; ' + d.accountMasked : '') + '</div></div>' +
+  escapeHtml_(d.bankName || '') + (d.accountMasked ? ' &middot; ' + escapeHtml_(d.accountMasked) : '') + '</div></div>' +
 
   '<div class="foot">' +
   'Generated ' + Utilities.formatDate(new Date(), 'GMT+2', 'd MMMM yyyy') + '. ' +

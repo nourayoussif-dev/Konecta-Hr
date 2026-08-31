@@ -555,7 +555,7 @@ function submitPersonalUpdate(payload){
       if(EMPLOYEE_EDITABLE.indexOf(field)===-1) return;
       const ci=hdr.indexOf(field);
       if(ci===-1){ missingCols.push(field); return; }   // column not on the sheet — skip, do not crash
-      const c=ci+1, oldV=fmt_(sh.getRange(me.row,c).getValue()), newV=String(payload[field]).trim();
+      const c=ci+1, oldV=fmt_(sh.getRange(me.row,c).getValue()), newV=scrubText_(String(payload[field]).trim());
       if(oldV===newV) return;
       sh.getRange(me.row,c).setValue(newV); changes.push([field,oldV,newV]);
     });
@@ -1005,7 +1005,7 @@ function onFormSubmit(e){
     // e.namedValues: { 'Question title': ['answer'], ... }
     Object.keys(e.namedValues||{}).forEach(function(q){
       const col=FORM_MAP[q.trim()];
-      if(col) vals[col]=String(e.namedValues[q][0]||'').trim();
+      if(col) vals[col]=scrubText_(String(e.namedValues[q][0]||'').trim());
     });
 
     const nid=vals.national_id||'';
@@ -1315,7 +1315,13 @@ function welcomeEmailHtml_(name, konectaEmail, url){
   '</div>' +
 '</div>';
 }
-function escapeHtml_(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeHtml_(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+// Strip angle brackets from a free-text value before it is stored. Names and
+// notes never legitimately contain HTML tags, and this keeps a planted
+// <img onerror> from ever reaching the sheet — defence in depth behind the
+// client-side esc(), which also protects values stored before this existed.
+function scrubText_(v){ return String(v==null?'':v).replace(/[<>]/g,''); }
 
 function notifyHR_(s,b){ try{ MailApp.sendEmail(HR_ADMINS.join(','),'[Konecta HR] '+s,b);}catch(e){console.error(e);} }
 function notifyIT_(s,b){ try{ MailApp.sendEmail(IT_USERS.join(','),'[Konecta IT] '+s,b);}catch(e){console.error(e);} }
@@ -5023,7 +5029,10 @@ function saveMyDependants(list){
     });
     const editable=existing.filter(function(d){ return String(d.status).trim()==='Pending enrolment'; });
 
-    const incoming=(list||[]).filter(function(d){ return String(d.name||'').trim(); });
+    const incoming=(list||[]).filter(function(d){ return String(d.name||'').trim(); })
+      // strip any HTML tags from the free-text fields before they are stored
+      .map(function(d){ return {name:scrubText_(d.name), date_of_birth:d.date_of_birth,
+        relation:scrubText_(d.relation), national_id:String(d.national_id||'').replace(/[^0-9]/g,'')}; });
 
     // an employee cannot quietly drop someone the insurer is covering
     const lockedCount=locked.filter(function(d){
