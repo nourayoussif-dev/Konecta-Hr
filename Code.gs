@@ -83,7 +83,7 @@ function include_(f){ return HtmlService.createHtmlOutputFromFile(f).getContent(
 // Only truthy sheets are memoised: several functions call sheet_() on a tab
 // that does not exist yet and then create it (TAB_CONTRACTS, TAB_APPOINTMENTS),
 // and caching the miss would leave them permanently invisible.
-var _MEMO = { ss:null, sheets:{}, headers:{} };
+var _MEMO = { ss:null, sheets:{}, headers:{}, empData:{} };
 
 function ss_(){
   if(!_MEMO.ss) _MEMO.ss = SpreadsheetApp.openById(SHEET_ID);
@@ -189,15 +189,27 @@ function isVisibleEmployee_(status, exitDate){
   return false;
 }
 
-// One cached read of the employee sheet, used by every operational function.
-// Cuts repeated full-sheet reads, which is most of the slowness.
+// One read of the employee sheet per execution, shared by every operational
+// function — the biggest single source of slowness was reading the whole
+// EMPLOYEES sheet many times in one request (an employee's page load alone
+// went through it four times).
+//
+// PER-EXECUTION MEMO, not CacheService. The previous version tried to cache
+// JSON.stringify({hdr, rows}) across executions, but the full table for a real
+// headcount is far larger than the 100 KB CacheService allows per key, so the
+// put() threw every time, was swallowed by the empty catch, and NOTHING was
+// ever cached — every call still read the sheet. The memo lives for one
+// execution (a new request starts empty), holds the raw row values so no
+// consumer sees a changed type, and is read-only to its callers (none mutate
+// .values), so sharing one object between them is safe.
+//
+// A correct cross-execution cache (a trimmed, chunked, fmt_-normalised
+// projection) is a separate, larger change — see docs/SECURITY.md's sibling
+// note in the performance backlog.
 function empData_(includeAll){
-  const key='empdata_'+(includeAll?'all':'active');
-  if(!includeAll){
-    const cache=CacheService.getScriptCache();
-    const hit=cache.get(key);
-    if(hit){ try{ return JSON.parse(hit); }catch(e){} }
-  }
+  const key=includeAll?'all':'active';
+  if(_MEMO.empData[key]) return _MEMO.empData[key];
+
   const sh=sheet_(TAB.EMP), hdr=headers_(TAB.EMP), data=sh.getDataRange().getValues();
   const si=hdr.indexOf('record_status'), xi=hdr.indexOf('exit_date'), ei=hdr.indexOf('employee_id');
   const rows=[];
@@ -207,16 +219,13 @@ function empData_(includeAll){
     rows.push({row:r+1, values:data[r]});
   }
   const out={hdr:hdr, rows:rows};
-  if(!includeAll){
-    try{ CacheService.getScriptCache().put(key, JSON.stringify(out), 300); }catch(e){}  // 5 minutes
-  }
+  _MEMO.empData[key]=out;
   return out;
 }
 
-// Call after any write, so the next read is fresh.
-function clearEmpCache_(){
-  try{ CacheService.getScriptCache().removeAll(['empdata_active','empdata_all']); }catch(e){}
-}
+// Call after any write to EMPLOYEES, so a later read in the SAME execution sees
+// the change. (A new request starts with an empty memo regardless.)
+function clearEmpCache_(){ _MEMO.empData={}; }
 
 
 function fmt_(v){ if(v instanceof Date) return Utilities.formatDate(v,Session.getScriptTimeZone(),'yyyy-MM-dd'); return v==null?'':String(v); }
@@ -533,13 +542,19 @@ function getManagerOptions(){
 }
 
 function getManagerIdentity_(){
+  // Memoised per execution: the caller's identity is fixed for the request, and
+  // this was being recomputed — a full EMPLOYEES read each time — inside
+  // per-row loops (e.g. getLeaveApprovals) and by getMyRecord/getMyTeam/
+  // actingFor_/myEmployeeId_ on every page load. null is a valid result
+  // ("not a manager"), so the sentinel is "property absent".
+  if('managerIdentity' in _MEMO) return _MEMO.managerIdentity;
   const me=currentUser_();
   // internal: find the employee whose konecta_email == me, use their employee_id
   const sh=sheet_(TAB.EMP), hdr=headers_(TAB.EMP), data=sh.getDataRange().getValues();
   const ke=hdr.indexOf('konecta_email'), ei=hdr.indexOf('employee_id');
   for(let r=1;r<data.length;r++){
     if(String(data[r][ke]).toLowerCase().trim()===me){
-      return {id:String(data[r][ei]).trim(), source:'employee'};
+      return (_MEMO.managerIdentity={id:String(data[r][ei]).trim(), source:'employee'});
     }
   }
   // global: MANAGERS tab has manager_id, name, can_view, email(optional col 4)
@@ -549,11 +564,11 @@ function getManagerIdentity_(){
     for(let i=0;i<md.length;i++){
       const email=String(md[i][3]||'').toLowerCase().trim();
       if(email && email===me && String(md[i][2]).toLowerCase().trim()==='yes'){
-        return {id:String(md[i][0]).trim(), source:'global'};
+        return (_MEMO.managerIdentity={id:String(md[i][0]).trim(), source:'global'});
       }
     }
   }
-  return null;
+  return (_MEMO.managerIdentity=null);
 }
 
 function getProjectMap(){

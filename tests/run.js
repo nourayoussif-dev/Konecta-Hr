@@ -62,6 +62,7 @@ require('./schema.test.js');
 require('./reachable.test.js');
 require('./escaping.test.js');
 require('./authz.test.js');
+require('./empdata.test.js');
 
 console.log('\n' + '─'.repeat(64));
 console.log(`\x1b[32m${results.pass} passed\x1b[0m` +
