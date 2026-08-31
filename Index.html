@@ -148,7 +148,9 @@ h3{font-size:13px;color:var(--navy);margin:16px 0 8px}
       <div id="delMsg" class="msg"></div>
       <div id="delCurrent"></div>
       <div class="grid" style="margin-top:12px">
-        <div class="f"><label>Who approves for you</label><select id="delWho"></select></div>
+        <div class="f"><label>Who approves for you</label><select id="delWho"></select>
+          <input id="delSearch" placeholder="Search a colleague outside your team…" style="margin-top:6px">
+          <div id="delSearchOut" style="max-height:160px;overflow:auto"></div></div>
         <div class="f"><label>Note (optional)</label><input id="delNote" placeholder="e.g. cover during annual leave"></div>
         <div class="f"><label>From (optional)</label><input type="date" id="delFrom"></div>
         <div class="f"><label>Until (optional)</label><input type="date" id="delTo"></div>
@@ -780,6 +782,10 @@ function parseAddress(a){
   return {street:p[0]||'', building:p[1]||'', apartment:p[2]||''};
 }
 function esc(v){return String(v==null?'':v).replace(/"/g,'&quot;');}
+// Full HTML-text escaper for values dropped into innerHTML. esc() only handles
+// the attribute-quote case; h() is for element text and must cover < > & too,
+// or an employee-controlled name becomes stored XSS in the HR console.
+function h(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function wireAddress(){/* nothing to wire; combined at save */}
 
 // ---------- dependants: their own tab, no cap ----------
@@ -1593,8 +1599,22 @@ function renderDelegates(d){
     var g='<optgroup label="'+t+'">';
     arr.forEach(function(m){ g+='<option value="'+m.email+'">'+m.label+'</option>'; });
     return g+'</optgroup>'; };
-  o+=grp('My team', d.team); o+=grp('Other colleagues', d.others);
+  o+=grp('My team', d.team); o+=grp('Other colleagues', d.others||[]);
   el('delWho').innerHTML=o;
+  // Colleagues outside the team are found by typeahead now (the server no
+  // longer ships the whole company directory). Picking a result fills delWho.
+  var ta=el('delSearch');
+  if(ta && d.typeahead){
+    ta.oninput=function(){
+      var term=ta.value.trim();
+      if(term.length<2){ el('delSearchOut').innerHTML=''; return; }
+      google.script.run.withSuccessHandler(function(rows){
+        el('delSearchOut').innerHTML = rows.length
+          ? rows.map(function(m){ return '<div class="qitem" style="cursor:pointer;padding:8px 10px" onclick="delPick(\''+esc(m.email)+'\',\''+esc(m.label)+'\')">'+h(m.label)+'</div>'; }).join('')
+          : '<p class="sub">No match.</p>';
+      }).withFailureHandler(function(e){ el('delSearchOut').innerHTML='<p class="sub">'+h(e.message)+'</p>'; }).delegateSearch(term);
+    };
+  }
   var cur=(d.current||[]).filter(function(x){return String(x.active).toLowerCase()==='yes';});
   window._del=cur;
   if(!cur.length){ el('delCurrent').innerHTML='<p class="sub">No one is currently approving on your behalf.</p>'; return; }
@@ -1607,6 +1627,12 @@ function renderDelegates(d){
        '<button class="ghost" style="padding:6px 12px" onclick="endDel('+c.row+')">End</button></div>';
   });
   el('delCurrent').innerHTML=h;
+}
+function delPick(email,label){
+  var sel=el('delWho');
+  var has=false; for(var i=0;i<sel.options.length;i++){ if(sel.options[i].value===email){ has=true; break; } }
+  if(!has){ var opt=document.createElement('option'); opt.value=email; opt.textContent=label; sel.appendChild(opt); }
+  sel.value=email; el('delSearchOut').innerHTML=''; if(el('delSearch')) el('delSearch').value='';
 }
 function saveDelegate(){
   var who=el('delWho').value;

@@ -40,6 +40,7 @@ function archiveTab_(period) {
  * be reissued, rename the existing tab first so the original survives.
  */
 function publishPayrollMonth(period, values) {
+  assertNotDirectCall_();   // run by the payroll operator/owner, never a web visitor
   var ss = archiveFor_(period);
   var name = ARCHIVE_PREFIX + period;
   if (ss.getSheetByName(name))

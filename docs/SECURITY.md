@@ -47,8 +47,10 @@ row-guarded where they write:
 `getMyClearanceTasks` `submitClearanceItems` (per-department: IT/Facilities/HR)
 `submitLeaveRequestFor` (HR, or the target's direct/dotted manager — checked)
 `initiateTermination` (HR, or the target's direct manager — checked)
-`getTerminationContext` (**was the one ungated door** — fixed 26/08/2026, now
-mirrors `initiateTermination`'s rule)
+`getTerminationContext` (fixed 26/08/2026, mirrors `initiateTermination`'s rule);
+`getDelegateOptions` (now returns only the caller's own team; outside-team
+delegates via the `delegateSearch` server-side typeahead, so the full company
+directory no longer crosses to the client)
 
 **Self-scoped (employee self-service)** — the caller cannot name a target;
 the record is resolved from their own login:
@@ -81,9 +83,42 @@ accepted, with the reason:
   This is the module's documented intent, HR-reviewed — but it is a large
   lever, and worth revisiting if it is ever abused.
 
-## Re-running the sweep
+## The reachable set (corrected 26/08/2026)
 
-Extract the entry points (`google.script.run .fn(` in `Index.html`,
-intersected with `function fn(` across the `.gs` files) and check the first
-lines of each for a gate. Any new entry point added without one of the gates
-above should fail review.
+The first version of this sweep intersected `function fn(` with the functions
+`Index.html` actually calls. **That was wrong and it hid a critical hole.**
+Apps Script exposes *every* top-level function whose name does not end in `_`
+to `google.script.run`, whether or not the client references it. So
+`buildPayslip(employeeId, period)` — the ungated engine sitting behind the
+gated `getMyPayslip` — was never reviewed, and any employee could read any
+colleague's full payslip with one console call. Same for
+`publishPayrollMonth`, `runPayrollChecks`, `include`, `openClearance`, and the
+daily-trigger functions.
+
+The reachable set is therefore: **every top-level `function name(` across all
+`.gs` files whose name does not end in `_`.** Each one must be:
+
+1. **gated** — `isHR_`, `isIT_`, `isFacilities_`, a manager/approver check, or
+   self-scoped from `currentUser_`; or
+2. **private** — renamed with a trailing `_` so it is unreachable; or
+3. **deliberately open** — listed in `tests/reachable.test.js` (`ACCEPTED_OPEN`)
+   with a one-line reason.
+
+`tests/reachable.test.js` enforces this on every `node tests/run.js`: it
+enumerates the reachable set and fails on any newcomer that is none of the
+three. Adding a function without gating, privatising, or accepting it breaks
+the build — which is what should have happened to `buildPayslip`.
+
+### Functions that run only on a schedule / from the editor
+
+`leaveDailyRun`, `resignationDailyRun`, `contractExpiryRun`,
+`runChecksThisMonth` and `publishPayrollMonth` are reachable globals (installable
+triggers bind by name, so they cannot be given a trailing `_` without breaking
+the trigger wiring). They are guarded by `assertNotDirectCall_()`, which throws
+when the active user differs from the effective (owner) user — the signature of
+a web-app call under "execute as Me". A trigger or editor run has active ==
+effective, so it passes. `onFormSubmit` refuses any call lacking `e.namedValues`,
+which only a real Forms submission carries.
+
+> If you rename any of these functions, update the matching installable trigger
+> in the Apps Script editor (Triggers panel) — triggers bind by function name.

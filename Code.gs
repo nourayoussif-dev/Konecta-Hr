@@ -66,7 +66,7 @@ function doGet(){
     .setTitle('Konecta Egypt — My Details')
     .addMetaTag('viewport','width=device-width, initial-scale=1');
 }
-function include(f){ return HtmlService.createHtmlOutputFromFile(f).getContent(); }
+function include_(f){ return HtmlService.createHtmlOutputFromFile(f).getContent(); }
 
 // ================== HELPERS ==================
 //
@@ -121,6 +121,20 @@ function currentUser_(){
   return e.toLowerCase();
 }
 function inList_(list){ const me=currentUser_(); return list.some(function(a){return String(a).toLowerCase().trim()===me;}); }
+
+// A function that is only ever meant to run on a time-driven trigger, from the
+// Apps Script editor, or as an internal call — never straight from a browser
+// via google.script.run. Under "execute as Me", a web-app visitor's ACTIVE
+// user differs from the EFFECTIVE (owner) user; in a trigger or editor run the
+// two are equal (both the owner). A blank active user means no web session, so
+// we let it through — currentUser_ already fails closed on the real web paths.
+function assertNotDirectCall_(){
+  var a='', e='';
+  try{ a=Session.getActiveUser().getEmail(); }catch(_){}
+  try{ e=Session.getEffectiveUser().getEmail(); }catch(_){}
+  if(a && e && a.toLowerCase().trim()!==e.toLowerCase().trim())
+    throw new Error('This runs on a schedule and cannot be called directly.');
+}
 function isHR_(){ return inList_(HR_ADMINS); }
 function isIT_(){ return inList_(IT_USERS); }
 
@@ -981,6 +995,9 @@ const FORM_MAP = {
 // Attach this to the FORM (not the sheet): Triggers -> add trigger ->
 // onFormSubmit -> From form -> On form submit.
 function onFormSubmit(e){
+  // A real Forms submission carries namedValues. A browser google.script.run
+  // call passes nothing — refuse it, so intake rows can only come from the form.
+  if(!e || !e.namedValues) throw new Error('This is triggered by the intake form, not callable directly.');
   const lock=LockService.getScriptLock(); lock.waitLock(30000);
   try{
     const sh=sheet_(TAB_INTAKE), hdr=intakeHeaders_();
@@ -2060,21 +2077,46 @@ function notifyLeaveOutcome_(row, final, approved, requested){
 function getDelegateOptions(){
   const identity=getManagerIdentity_();
   if(!identity) return {canDelegate:false};
-  const sh=sheet_(TAB.EMP), hdr=headers_(TAB.EMP), data=sh.getDataRange().getValues();
-  const ei=hdr.indexOf('employee_id'), ni=hdr.indexOf('full_name_en'),
-        ke=hdr.indexOf('konecta_email'), dm=hdr.indexOf('direct_manager'), st=hdr.indexOf('record_status');
-  const team=[], others=[];
-  for(let r=1;r<data.length;r++){
-    const id=String(data[r][ei]).trim(); if(!id) continue;
-    if(String(data[r][st])==='Closed') continue;
-    const email=String(data[r][ke]).trim(); if(!email) continue;   // must be able to log in
-    const item={id:id, email:email, label:String(data[r][ni]).trim()+' ('+id+')'};
-    (String(data[r][dm]).trim()===identity.id ? team : others).push(item);
-  }
-  const byLabel=function(a,b){return a.label.localeCompare(b.label);};
-  team.sort(byLabel); others.sort(byLabel);
-  return {canDelegate:true, managerId:identity.id, team:team, others:others,
+  // Only return this manager's OWN team. The old version shipped every active
+  // employee's name AND Konecta email to any manager — the whole company
+  // directory — as the "others" list. A delegate outside the team is chosen by
+  // server-side typeahead (delegateSearch) instead, so no bulk email list ever
+  // crosses to the client.
+  const E=empData_(false), h=E.hdr;
+  const ei=h.indexOf('employee_id'), ni=h.indexOf('full_name_en'),
+        ke=h.indexOf('konecta_email'), dm=h.indexOf('direct_manager');
+  const team=[];
+  E.rows.forEach(function(rec){
+    const v=rec.values;
+    if(String(v[dm]).trim()!==identity.id) return;
+    const email=String(v[ke]).trim(); if(!email) return;   // must be able to log in
+    team.push({id:String(v[ei]).trim(), email:email,
+               label:String(v[ni]).trim()+' ('+String(v[ei]).trim()+')'});
+  });
+  team.sort(function(a,b){return a.label.localeCompare(b.label);});
+  return {canDelegate:true, managerId:identity.id, team:team, others:[], typeahead:true,
           current:myDelegations_()};
+}
+
+// Server-side typeahead for delegating outside your team: needs 2+ characters,
+// returns at most 10 matches, and only to a manager. Replaces shipping every
+// Konecta email to the client.
+function delegateSearch(term){
+  const identity=getManagerIdentity_();
+  if(!identity) throw new Error('Only a manager can delegate.');
+  const q=String(term||'').trim().toLowerCase();
+  if(q.length<2) return [];
+  const E=empData_(false), h=E.hdr;
+  const ei=h.indexOf('employee_id'), ni=h.indexOf('full_name_en'), ke=h.indexOf('konecta_email');
+  const out=[];
+  for(let i=0;i<E.rows.length && out.length<10;i++){
+    const v=E.rows[i].values;
+    const email=String(v[ke]).trim(); if(!email) continue;
+    const name=String(v[ni]).trim();
+    if((name+' '+String(v[ei])+' '+email).toLowerCase().indexOf(q)===-1) continue;
+    out.push({id:String(v[ei]).trim(), email:email, label:name+' ('+String(v[ei]).trim()+')'});
+  }
+  return out;
 }
 
 function myDelegations_(){
@@ -2149,6 +2191,7 @@ const AUTO_APPROVE_AFTER_DAYS = 5;      // working days with no decision
 const REMIND_ON_DAYS = [2, 4];          // day 4 copies HR
 
 function leaveDailyRun(){
+  assertNotDirectCall_();
   schemaDailyCheck_();
   const sh=sheet_(TAB_LEAVE);
   if(!sh || sh.getLastRow()<2) return;
@@ -2650,7 +2693,7 @@ function finaliseResignation_(row, hdr, lastDay, auto){
       '\n\nKonecta Egypt — People team'); }catch(e){}
   }
   // open the clearance record — handover starts with the managers
-  try{ openClearance(eid, lastDay); }catch(e){ console.error('clearance open failed: '+e); }
+  try{ openClearance_(eid, lastDay); }catch(e){ console.error('clearance open failed: '+e); }
 
   notifyHR_('Resignation confirmed — '+g('resignation_id'),
     g('employee_name')+' ('+eid+') — last working day '+lastDay+
@@ -2780,6 +2823,7 @@ function notifyResignApprovers_(row, hdr, kind){
 // ---------- daily run: reminders every 2 days, auto-approve at 10 ----------
 // Add ONE time-driven daily trigger for this.
 function resignationDailyRun(){
+  assertNotDirectCall_();
   const sh=sheet_(TAB_RESIGN);
   if(!sh || sh.getLastRow()<2) return;
   const hdr=resignHdr_(); const i=function(f){return hdr.indexOf(f);};
@@ -2973,7 +3017,7 @@ function isFacilities_(){ return inList_(FACILITIES_USERS); }
 function clearHdr_(){ const sh=sheet_(TAB_CLEAR); return sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0]; }
 
 // Open a clearance record. Called when a resignation is confirmed, or by HR directly.
-function openClearance(employeeId, lastWorkingDay){
+function openClearance_(employeeId, lastWorkingDay){
   const lock=LockService.getScriptLock(); lock.waitLock(20000);
   try{
     const eid=String(employeeId).trim();
@@ -3349,7 +3393,7 @@ function reportNoShow(p){
 
     // open clearance so equipment recovery starts
     let clid='';
-    try{ const c=openClearance(eid, ''); if(c && c.ok) clid=c.id; }catch(e){}
+    try{ const c=openClearance_(eid, ''); if(c && c.ok) clid=c.id; }catch(e){}
     set('clearance_id', clid);
 
     const isDrop = String(p.event_type||'No show')==='Drop out';
@@ -3494,6 +3538,7 @@ const EXPIRY_WARN_DAYS = 60;
 const EXPIRY_REMINDER_TAB = 'EXPIRY_LOG';   // so nobody is warned twice for the same contract
 
 function contractExpiryRun(){
+  assertNotDirectCall_();
   const E=empData_(false), h=E.hdr;
   const col=function(f){return h.indexOf(f);};
   const cEid=col('employee_id'), cNm=col('full_name_en'), cEnd=col('contract_end_date'),
@@ -3836,7 +3881,7 @@ function applyTermination_(row, hdr, ctx, reason, rule, lastDay){
   logChange_(eid,'','record_status','','On Hold','Termination','Applied',reason);
 
   let clid='';
-  try{ const c=openClearance(eid, when); if(c && c.ok) clid=c.id; }catch(e){}
+  try{ const c=openClearance_(eid, when); if(c && c.ok) clid=c.id; }catch(e){}
   return clid;
 }
 

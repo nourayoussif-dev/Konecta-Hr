@@ -15,7 +15,7 @@
  */
 function makePayslipPdf(period, employeeIdIfHR) {
   var d = (isHR_() && employeeIdIfHR)
-        ? buildPayslip(employeeIdIfHR, period)
+        ? buildPayslip_(employeeIdIfHR, period)
         : getMyPayslip(period);
 
   var html = payslipHtml_(d, period);

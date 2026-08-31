@@ -23,7 +23,7 @@ function chkCols_(headers) {
  * MAIN. Run this, then read the PAYROLL CHECKS tab.
  * monthStart / monthEnd as Date objects, e.g. new Date(2026,7,1), new Date(2026,7,31)
  */
-function runPayrollChecks(monthStart, monthEnd) {
+function runPayrollChecks_(monthStart, monthEnd) {
   var ss = ss_();
   var master = ss.getSheetByName(CHK.MASTER_SHEET).getDataRange().getValues();
   var head = chkCols_(master[0]);
@@ -167,14 +167,15 @@ function writeCheckResults_(ss, issues, monthStart) {
 
 /** Convenience: run for the current month. */
 function runChecksThisMonth() {
+  assertNotDirectCall_();   // monthly trigger, not a web endpoint
   var now = new Date();
   var s = new Date(now.getFullYear(), now.getMonth(), 1);
   var e = new Date(now.getFullYear(), now.getMonth()+1, 0);
-  var n = runPayrollChecks(s, e);
+  var n = runPayrollChecks_(s, e);
     Logger.log(n + ' issues found. See the PAYROLL CHECKS tab.');
 }
 
-function whichFile() {
+function whichFile_() {
   var ss = ss_();
   if (!ss) { Logger.log('NOT BOUND — no active spreadsheet'); return; }
   Logger.log('Bound to: ' + ss.getName());
