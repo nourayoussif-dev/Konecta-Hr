@@ -128,6 +128,32 @@ function inList_(list){ const me=currentUser_(); return list.some(function(a){re
 // user differs from the EFFECTIVE (owner) user; in a trigger or editor run the
 // two are equal (both the owner). A blank active user means no web session, so
 // we let it through — currentUser_ already fails closed on the real web paths.
+function myEmployeeId_(){
+  const id=(getManagerIdentity_()||{}).id;
+  if(id) return id;
+  try{ const e=employeeByEmail_(currentUser_()); return (e && e.employee_id) || ''; }catch(_){ return ''; }
+}
+// Nobody decides their own request. Blocks a manager approving/deciding a
+// leave, resignation, withdrawal or handover where they are the subject.
+function assertNotSelf_(subjectEmployeeId){
+  const me=myEmployeeId_();
+  if(me && String(subjectEmployeeId||'').trim()===me)
+    throw new Error('You cannot decide your own request.');
+}
+
+// A light per-caller rate limit backed by the script cache. Returns false when
+// the caller has exceeded `max` calls to `bucket` in the last hour. Fail-open
+// on any cache error — availability of a legitimate report matters more.
+function withinRateLimit_(bucket, max){
+  try{
+    const key='rl_'+bucket+'_'+currentUser_()+'_'+Math.floor(Date.now()/3600000);
+    const c=CacheService.getScriptCache();
+    const n=parseInt(c.get(key)||'0',10)+1;
+    c.put(key, String(n), 3600);
+    return n<=max;
+  }catch(e){ return true; }
+}
+
 function assertNotDirectCall_(){
   var a='', e='';
   try{ a=Session.getActiveUser().getEmail(); }catch(_){}
@@ -786,11 +812,32 @@ function hrGetBankPending(){
   return out;
 }
 
+// Who last changed this employee's bank details (from the CHANGE LOG), so the
+// same person cannot both enter and verify them — a real four-eyes control.
+function lastBankChangeBy_(eid){
+  const sh=sheet_(TAB.LOG); if(!sh || sh.getLastRow()<2) return '';
+  const data=sh.getRange(2,1,sh.getLastRow()-1,9).getValues();  // id,date,emp,nid,field,old,new,actor,source
+  let bestAt=0, bestBy='';
+  for(let r=0;r<data.length;r++){
+    if(String(data[r][2]).trim()!==String(eid).trim()) continue;
+    if(BANK_FIELDS.indexOf(String(data[r][4]))===-1) continue;
+    const t=new Date(data[r][1]).getTime();
+    if(!isNaN(t) && t>=bestAt){ bestAt=t; bestBy=String(data[r][7]||'').toLowerCase().trim(); }
+  }
+  return bestBy;
+}
+
 function hrVerifyBank(row, decision, key){
   if(!isHR_()) throw new Error('HR only.');
   const sh=sheet_(TAB.EMP),hdr=headers_(TAB.EMP);
   row=guardRow_(sh,hdr,row,{employee_id:key});
   const val = decision==='reject' ? 'Rejected' : 'Verified';
+  if(val==='Verified'){
+    // Four-eyes: whoever last changed the bank details cannot also verify them.
+    const eidNow=fmt_(sh.getRange(row,hdr.indexOf('employee_id')+1).getValue());
+    if(lastBankChangeBy_(eidNow)===currentUser_())
+      throw new Error('These bank details were last changed by you. A different HR user must verify them.');
+  }
   const old = fmt_(sh.getRange(row,hdr.indexOf('bank_verified')+1).getValue());
   sh.getRange(row,hdr.indexOf('bank_verified')+1).setValue(val);
   stampUpdate_(sh,hdr,row);
@@ -896,7 +943,7 @@ function hrGetRecord(row, key){
 var HR_LOCKED = ['employee_id','completeness_%','blocking_gaps','chase_gaps','report_name',
   'report_surname','citizenship_code','gender_code','has_disability_code','training_contract_code',
   'company_type_code','contract_type_code','contract_time_code','exit_type_code',
-  'created_at','created_by','updated_at','updated_by','insurance_wage'];
+  'created_at','created_by','updated_at','updated_by','insurance_wage','bank_verified'];
 
 function hrSaveRecord(row, payload, key){
   if(!isHR_()) throw new Error('HR only.');
@@ -917,6 +964,21 @@ function hrSaveRecord(row, payload, key){
       sh.getRange(row,c+1).setValue(newV);
       changes.push([field,oldV,newV]);
     });
+    // Any change to bank details voids the prior verification — the four-eyes
+    // control is that HR re-verifies through hrVerifyBank (a distinct person),
+    // never that an edit here silently keeps a stale 'Verified'.
+    const bankTouched=changes.some(function(ch){ return BANK_FIELDS.indexOf(ch[0])!==-1; });
+    if(bankTouched){
+      const bc=hdr.indexOf('bank_verified');
+      if(bc!==-1){
+        const oldBv=fmt_(sh.getRange(row,bc+1).getValue());
+        if(oldBv!=='Pending verification'){
+          sh.getRange(row,bc+1).setValue('Pending verification');
+          logChange_(eid,nid,'bank_verified',oldBv,'Pending verification','HR editor','Applied',
+                     'Bank details edited — re-verification required');
+        }
+      }
+    }
     stampUpdate_(sh,hdr,row);
     changes.forEach(function(ch){ logChange_(eid,nid,ch[0],ch[1],ch[2],'HR editor','Applied','Edited by HR'); });
     return {ok:true,count:changes.length};
@@ -1565,9 +1627,15 @@ function submitLeaveRequest(p){
     const id='LV-'+String(row-1).padStart(6,'0');
     const set=function(f,v){ const i=hdr.indexOf(f); if(i!==-1) sh.getRange(row,i+1).setValue(v); };
 
-    const dm=String(p.direct_manager||info.direct_manager||'').trim();
-    const dt=String(p.dotted_manager||info.dotted_manager||'').trim();
-    const corrected = (dm!==String(info.direct_manager||'').trim()) || (dt!==String(info.dotted_manager||'').trim());
+    // The approver is taken from the employee's RECORD, never from the client.
+    // The old code let p.direct_manager override info.direct_manager, so an
+    // employee could name themselves as their own approver and (if they were a
+    // manager) approve their own leave. Any correction the employee suggests is
+    // kept as a non-authoritative note for HR.
+    const dm=String(info.direct_manager||'').trim();
+    const dt=String(info.dotted_manager||'').trim();
+    const statedDm=String(p.direct_manager||'').trim(), statedDt=String(p.dotted_manager||'').trim();
+    const corrected = (statedDm && statedDm!==dm) || (statedDt && statedDt!==dt);
 
     set('request_id',id); set('submitted_at',new Date());
     set('employee_id',info.employee_id); set('employee_name',info.name);
@@ -1576,7 +1644,7 @@ function submitLeaveRequest(p){
     set('start_date',p.start_date); set('end_date',p.end_date);
     set('days_requested',c.days); set('reason',String(p.reason||'').trim());
     set('direct_manager',dm); set('dotted_manager',dt);
-    if(corrected){ set('direct_manager_stated',dm); set('dotted_manager_stated',dt); set('manager_correction','Yes'); }
+    if(corrected){ set('direct_manager_stated',statedDm); set('dotted_manager_stated',statedDt); set('manager_correction','Yes'); }
     if(t.track==='Discretionary'){ set('direct_status','Pending'); if(dt) set('dotted_status','Pending'); }
     else { set('hr_status','Pending'); set('document_received','No'); }
     set('final_status','Pending');
@@ -1936,6 +2004,7 @@ function decideLeave(row, decision, days, comment, keptDates, key){
     const get=function(f){ const c=i(f); return c===-1?'':fmt_(sh.getRange(row,c+1).getValue()); };
     const set=function(f,v){ const c=i(f); if(c!==-1) sh.getRange(row,c+1).setValue(v); };
 
+    assertNotSelf_(get('employee_id'));
     if(String(get('track'))!=='Discretionary') throw new Error('This leave type is validated by HR, not by managers.');
     const dm=resolveApprover_(get('direct_manager')), dt=resolveApprover_(get('dotted_manager'));
     const ds=String(get('direct_status')||''), ts=String(get('dotted_status')||'');
@@ -2620,6 +2689,7 @@ function decideResignation(row, decision, proposedDate, comment, key){
     const get=function(f){ const c=i(f); return c===-1?'':fmt_(sh.getRange(row,c+1).getValue()); };
     const set=function(f,v){ const c=i(f); if(c!==-1) sh.getRange(row,c+1).setValue(v); };
 
+    assertNotSelf_(get('employee_id'));
     if(get('final_status')!=='Pending') throw new Error('This resignation is no longer open.');
     const dm=get('direct_manager'), dt=get('dotted_manager');
     let role=null;
@@ -2747,6 +2817,7 @@ function decideWithdrawal(row, accept, comment, key){
   const i=function(f){return hdr.indexOf(f);};
   const g=function(f){ const c=i(f); return c===-1?'':fmt_(sh.getRange(row,c+1).getValue()); };
   const set=function(f,v){ const c=i(f); if(c!==-1) sh.getRange(row,c+1).setValue(v); };
+  assertNotSelf_(g('employee_id'));
   if(acting.indexOf(g('direct_manager'))===-1) throw new Error('Only the direct manager can decide a withdrawal.');
   if(g('withdraw_status')!=='Pending manager') throw new Error('There is no withdrawal request open.');
 
@@ -3120,6 +3191,7 @@ function confirmHandover(row, note, key){
   const g=function(f){ const c=hdr.indexOf(f); return c===-1?'':fmt_(sh.getRange(row,c+1).getValue()); };
   const set=function(f,v){ const c=hdr.indexOf(f); if(c!==-1) sh.getRange(row,c+1).setValue(v); };
   const eid=g('employee_id');
+  assertNotSelf_(eid);
   const dm=resolveApprover_(directManagerOf_(eid)), dt=resolveApprover_(dottedManagerOf_(eid));
 
   let role=null;
@@ -3351,6 +3423,10 @@ function reportNoShow(p){
     if(!eid) return {ok:false,msg:'Enter the employee ID of the person who has not shown up.'};
     const since=String(p.absent_since||'').trim();
     if(!since) return {ok:false,msg:'Enter the date they were last expected.'};
+    // A no-show report places a payment hold. Anyone may file one (by design),
+    // but a scripted loop must not be able to hold the whole payroll — cap it.
+    if(!withinRateLimit_('noshow', 20))
+      return {ok:false,msg:'Too many no-show reports in a short time. Please try again later or contact HR.'};
 
     const f=employeeFieldsOf_(eid,['employee_id','full_name_en','konecta_email',
                                    'record_status','direct_manager','dotted_manager']);
@@ -3368,8 +3444,12 @@ function reportNoShow(p){
 
     // everyone who should know: HR always, the absent person's managers,
     // the reporter's own manager, and anyone the reporter added by hand
-    const cc=String(p.cc_list||'').split(/[,;\s]+/).map(function(x){return x.trim();})
-              .filter(function(x){ return /^[^@]+@[^@]+$/.test(x); });
+    // cc only Konecta addresses, and cap the count. The old regex accepted any
+    // domain, so the notification (carrying the employee's name, id and Konecta
+    // email) could be sent to an attacker-supplied external mailbox.
+    const cc=String(p.cc_list||'').split(/[,;\s]+/).map(function(x){return x.trim().toLowerCase();})
+              .filter(function(x){ return /^[^@]+@konecta\.com$/.test(x); })
+              .slice(0,10);
     const recips={};
     HR_ADMINS.forEach(function(a){ recips[a]=true; });
     [f.direct_manager, f.dotted_manager].forEach(function(m){
@@ -4694,9 +4774,6 @@ const BULK_FIELDS = {
   'hire_date':         {label:'Hire date',        kind:'date'},
   'job_title':         {label:'Job title',        kind:'text'},
   'department':        {label:'Department',       kind:'department'},
-  'bank_name':         {label:'Bank name',        kind:'text'},
-  'account_number':    {label:'Account number',   kind:'text'},
-  'iban':              {label:'IBAN',             kind:'iban'}
 };
 
 function bulkFieldOptions(){
