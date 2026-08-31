@@ -63,7 +63,7 @@ function money_(v){ return Utilities.formatString('%s', Utilities.formatString('
  * Build the payslip for one employee.
  * period e.g. '2026_08'. Returns an object the UI renders.
  */
-function buildPayslip(employeeId, period) {
+function buildPayslip_(employeeId, period) {
   var sh = archiveTab_(period);            // published month, in the archive file
   if (!sh) throw new Error('No payroll has been published for that month yet.');
 
@@ -152,14 +152,14 @@ function maskAccount_(acct) {
  */
 function getMyPayslip(period, employeeIdIfHR) {
   var me = currentUser_();
-  if (isHR_() && employeeIdIfHR) return buildPayslip(employeeIdIfHR, period);
+  if (isHR_() && employeeIdIfHR) return buildPayslip_(employeeIdIfHR, period);
 
   var ss = ss_();
   var master = ss.getSheetByName(PS.MASTER).getDataRange().getValues();
   var mh = {}; for (var k = 0; k < master[0].length; k++) mh[String(master[0][k]).trim()] = k;
   for (var m = 1; m < master.length; m++) {
     var email = String(master[m][mh['konecta_email']] || '').toLowerCase().trim();
-    if (email === me) return buildPayslip(String(master[m][mh['employee_id']]).trim(), period);
+    if (email === me) return buildPayslip_(String(master[m][mh['employee_id']]).trim(), period);
   }
   throw new Error('We could not find an employee record for your account. Please contact HR.');
 }
